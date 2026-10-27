@@ -1,0 +1,777 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0B483A5BE66C41B1C5625EFB /* MediaPipeHandTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ECB91CCE4A5C486312A2DAB /* MediaPipeHandTracker.swift */; };
+		0E71BC355219166B02BC2E08 /* hand_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = 5BD37186DFDE5A340758982C /* hand_landmarker.task */; };
+		13AF48417FB83D4BEDFF320F /* IntentParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2037BA9D750D1F08FD270EA /* IntentParserTests.swift */; };
+		15A5D9384A4A8B8F3675EDAA /* PhoneFrameSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEA0C9404944334D693A549 /* PhoneFrameSource.swift */; };
+		29700D8EA93EB70888456F43 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98E6863B1EDF9565D4C358DE /* SettingsView.swift */; };
+		49ED13D3CE0C56284D982A58 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 15F8702344D65F128686B62D /* Assets.xcassets */; };
+		54A5CD4D0A8B9B964D1F0EC1 /* UtteranceSegmenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B1623A8C533F000C262522E /* UtteranceSegmenter.swift */; };
+		59F0749A85A9ED37DC34D8F8 /* LocationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E38BDF618306E375340B190B /* LocationProvider.swift */; };
+		650EBA10AB902AD80B2CFE67 /* WhisperTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1004F817BD6FC32E772F472D /* WhisperTranscriber.swift */; };
+		66C20D0995A8348B4FBFF434 /* WinkConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5CAE57A2CBB7328E497341F /* WinkConfig.swift */; };
+		6B76555430A9CE6CB1796095 /* SpeechOut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F46BBBE129A2F95F4201112 /* SpeechOut.swift */; };
+		6C1B190AA4B656990EAAB50B /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6F9DD2220127FC317066E7DF /* WhisperKit */; };
+		6E6B21E26D51D80A1F3D46B3 /* MWDATCamera in Frameworks */ = {isa = PBXBuildFile; productRef = 71A054F4E296C566BE237E8A /* MWDATCamera */; };
+		6ECDB34CCF6DDF5E433B8504 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A932BCB17B26A6D4496217 /* ContentView.swift */; };
+		700F12EC4E6946A2DA18C8D4 /* GestureClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76FA9D26F5F14885A190C12F /* GestureClassifierTests.swift */; };
+		716F0621195D142537A2E1A5 /* Pods_Wink.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 464BED3B6C66DE0C1A170239 /* Pods_Wink.framework */; };
+		7716175068200949F40286F0 /* MWDATMockDevice in Frameworks */ = {isa = PBXBuildFile; productRef = 6FB7A737082AD01050AD8C66 /* MWDATMockDevice */; };
+		8D925CD165E7DB6D0CDC98C7 /* GesturePipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5DFA5DF8C40D54294354B22 /* GesturePipeline.swift */; };
+		909733244029DB6762506206 /* Pods_WinkTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3DE7BBA8D68A53C2E4D7180A /* Pods_WinkTests.framework */; };
+		968375366587CDC5D6F812E0 /* IntentParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4F022D376F8756C5EDDD468 /* IntentParser.swift */; };
+		99DD1E4DB8ACF2FB7AF80F99 /* GestureClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99BC4623F3B4007606522746 /* GestureClassifier.swift */; };
+		9D0B29F5F035A74C19102015 /* WakePhrase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F48CAC95D17826D1374CAC7E /* WakePhrase.swift */; };
+		A1BC8F52F56814816515B12C /* WinkAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89182C1457B98407A8593F8A /* WinkAPIClient.swift */; };
+		AAE2505CAA5FB678CEB0D4FA /* GlassesFrameSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A308BC1571B587339AEB520C /* GlassesFrameSource.swift */; };
+		B0C162B37DEBA9A9052C2387 /* VisionHandTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61B7C090CD35318FAB4BE4D6 /* VisionHandTracker.swift */; };
+		B1E8B2F5AEC3983A8C75C7BD /* HandTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ED5E7767F55AF547B6368FF /* HandTracker.swift */; };
+		C1A2F4DB81D634DD453402FF /* WinkModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CCA80A06CDC85B4C2124539 /* WinkModels.swift */; };
+		C34D3B36A21675C65319CBDF /* MWDATCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0216A5B906E6076FD2AAEF88 /* MWDATCore */; };
+		C517DCDEEE8B62F2F3973CD6 /* LiveSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF44A036A975F39AD7F6B4FF /* LiveSocket.swift */; };
+		C6CD0DE22B8C3BC629F36BD6 /* FrameSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964CBA323B6FFE0FDA6F3F6B /* FrameSource.swift */; };
+		CBFCB54044BC1977DAAA5B8E /* WinkController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93C819401F3C813A19A1B825 /* WinkController.swift */; };
+		CEF2D57A8C830F16F59958CE /* ImageUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080A627D9AB685A8636C953D /* ImageUtils.swift */; };
+		D02FD52DBF66BFAB34AEC385 /* WinkApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC6406DB860934579E94784 /* WinkApp.swift */; };
+		D3A2DAE61C792AA307671B08 /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58944FFBBF55A561F1867F02 /* AudioSessionManager.swift */; };
+		DB35A5131036D225BB535A20 /* WakeWordListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1042C25C19723A760D8CB060 /* WakeWordListener.swift */; };
+		EF1B61842CE40714A11AF033 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBF4C62D26A3EBE9815F6FA0 /* PreviewView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		EDB49E92A9C4E4CB6A38E663 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FCD78D3D2C6D3945AA50080D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DAED9FC1F571B5B293148D91;
+			remoteInfo = Wink;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		080A627D9AB685A8636C953D /* ImageUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageUtils.swift; sourceTree = "<group>"; };
+		1004F817BD6FC32E772F472D /* WhisperTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperTranscriber.swift; sourceTree = "<group>"; };
+		1042C25C19723A760D8CB060 /* WakeWordListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeWordListener.swift; sourceTree = "<group>"; };
+		15F8702344D65F128686B62D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1C5FC4B2299796DE0B5D06D5 /* Pods-Wink.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Wink.debug.xcconfig"; path = "Target Support Files/Pods-Wink/Pods-Wink.debug.xcconfig"; sourceTree = "<group>"; };
+		2D91489EDE2C707E281972C2 /* WinkTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WinkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		37B6FA6FC5A115C740554032 /* Pods-WinkTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WinkTests.release.xcconfig"; path = "Target Support Files/Pods-WinkTests/Pods-WinkTests.release.xcconfig"; sourceTree = "<group>"; };
+		3AA9FD4F36A32D568BFED8E1 /* Wink.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wink.entitlements; sourceTree = "<group>"; };
+		3CCA80A06CDC85B4C2124539 /* WinkModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinkModels.swift; sourceTree = "<group>"; };
+		3DE7BBA8D68A53C2E4D7180A /* Pods_WinkTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_WinkTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		3ECB91CCE4A5C486312A2DAB /* MediaPipeHandTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPipeHandTracker.swift; sourceTree = "<group>"; };
+		464BED3B6C66DE0C1A170239 /* Pods_Wink.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Wink.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		58944FFBBF55A561F1867F02 /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionManager.swift; sourceTree = "<group>"; };
+		5BD37186DFDE5A340758982C /* hand_landmarker.task */ = {isa = PBXFileReference; path = hand_landmarker.task; sourceTree = "<group>"; };
+		5D5D35445F088EF07CEBE8DA /* Wink.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Wink.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		61B7C090CD35318FAB4BE4D6 /* VisionHandTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionHandTracker.swift; sourceTree = "<group>"; };
+		6EB633CCFA68E6B8E5F7EE57 /* Pods-Wink.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Wink.release.xcconfig"; path = "Target Support Files/Pods-Wink/Pods-Wink.release.xcconfig"; sourceTree = "<group>"; };
+		76FA9D26F5F14885A190C12F /* GestureClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureClassifierTests.swift; sourceTree = "<group>"; };
+		7A961D7DD5E7C0477D7C69EC /* Wink.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Wink.xcconfig; sourceTree = "<group>"; };
+		89182C1457B98407A8593F8A /* WinkAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinkAPIClient.swift; sourceTree = "<group>"; };
+		8B1623A8C533F000C262522E /* UtteranceSegmenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UtteranceSegmenter.swift; sourceTree = "<group>"; };
+		8ED5E7767F55AF547B6368FF /* HandTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTracker.swift; sourceTree = "<group>"; };
+		8F46BBBE129A2F95F4201112 /* SpeechOut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechOut.swift; sourceTree = "<group>"; };
+		93C819401F3C813A19A1B825 /* WinkController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinkController.swift; sourceTree = "<group>"; };
+		964CBA323B6FFE0FDA6F3F6B /* FrameSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameSource.swift; sourceTree = "<group>"; };
+		98E6863B1EDF9565D4C358DE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		99BC4623F3B4007606522746 /* GestureClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureClassifier.swift; sourceTree = "<group>"; };
+		A308BC1571B587339AEB520C /* GlassesFrameSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassesFrameSource.swift; sourceTree = "<group>"; };
+		A5CAE57A2CBB7328E497341F /* WinkConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinkConfig.swift; sourceTree = "<group>"; };
+		B2037BA9D750D1F08FD270EA /* IntentParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentParserTests.swift; sourceTree = "<group>"; };
+		BBC6406DB860934579E94784 /* WinkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinkApp.swift; sourceTree = "<group>"; };
+		BBF4C62D26A3EBE9815F6FA0 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
+		BEEA0C9404944334D693A549 /* PhoneFrameSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneFrameSource.swift; sourceTree = "<group>"; };
+		C82F8CDD4A6AB156D6C45EA0 /* Pods-WinkTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WinkTests.debug.xcconfig"; path = "Target Support Files/Pods-WinkTests/Pods-WinkTests.debug.xcconfig"; sourceTree = "<group>"; };
+		D2F4FD5DD75BC16A1FA1F2C6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		D4F022D376F8756C5EDDD468 /* IntentParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentParser.swift; sourceTree = "<group>"; };
+		D5DFA5DF8C40D54294354B22 /* GesturePipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GesturePipeline.swift; sourceTree = "<group>"; };
+		E38BDF618306E375340B190B /* LocationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationProvider.swift; sourceTree = "<group>"; };
+		E8A932BCB17B26A6D4496217 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		F48CAC95D17826D1374CAC7E /* WakePhrase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakePhrase.swift; sourceTree = "<group>"; };
+		FF44A036A975F39AD7F6B4FF /* LiveSocket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveSocket.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		33ECD79F4D1B702EA23F6F9C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6C1B190AA4B656990EAAB50B /* WhisperKit in Frameworks */,
+				C34D3B36A21675C65319CBDF /* MWDATCore in Frameworks */,
+				6E6B21E26D51D80A1F3D46B3 /* MWDATCamera in Frameworks */,
+				7716175068200949F40286F0 /* MWDATMockDevice in Frameworks */,
+				716F0621195D142537A2E1A5 /* Pods_Wink.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F9D97EDE66A555F6A954FC46 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				909733244029DB6762506206 /* Pods_WinkTests.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		019B819ADFECC653225B48E4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5D5D35445F088EF07CEBE8DA /* Wink.app */,
+				2D91489EDE2C707E281972C2 /* WinkTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		033FFF2E2F0576A6EA9B65A6 /* Camera */ = {
+			isa = PBXGroup;
+			children = (
+				964CBA323B6FFE0FDA6F3F6B /* FrameSource.swift */,
+				A308BC1571B587339AEB520C /* GlassesFrameSource.swift */,
+				080A627D9AB685A8636C953D /* ImageUtils.swift */,
+				BEEA0C9404944334D693A549 /* PhoneFrameSource.swift */,
+			);
+			path = Camera;
+			sourceTree = "<group>";
+		};
+		063AEAFBBCD3B9D529B70A8E /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				A5CAE57A2CBB7328E497341F /* WinkConfig.swift */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		0E0BB8C84A3C33A92ADF4721 /* Gestures */ = {
+			isa = PBXGroup;
+			children = (
+				99BC4623F3B4007606522746 /* GestureClassifier.swift */,
+				D5DFA5DF8C40D54294354B22 /* GesturePipeline.swift */,
+				8ED5E7767F55AF547B6368FF /* HandTracker.swift */,
+				3ECB91CCE4A5C486312A2DAB /* MediaPipeHandTracker.swift */,
+				61B7C090CD35318FAB4BE4D6 /* VisionHandTracker.swift */,
+			);
+			path = Gestures;
+			sourceTree = "<group>";
+		};
+		3193B45CD2CA4F1F8B405D4F = {
+			isa = PBXGroup;
+			children = (
+				98C5C3E79F882CC8A8F85B6D /* Config */,
+				70FB9AC37224264EB95E3F59 /* Wink */,
+				D8DA31506748F58CE73D8E83 /* WinkTests */,
+				019B819ADFECC653225B48E4 /* Products */,
+				55EEF27B5CC52814A8A7F4D4 /* Pods */,
+				ED1A7FED1FD980E9D38DB1D4 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		363F56759E1530C75F7A0A35 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				E8A932BCB17B26A6D4496217 /* ContentView.swift */,
+				BBF4C62D26A3EBE9815F6FA0 /* PreviewView.swift */,
+				98E6863B1EDF9565D4C358DE /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		55EEF27B5CC52814A8A7F4D4 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				1C5FC4B2299796DE0B5D06D5 /* Pods-Wink.debug.xcconfig */,
+				6EB633CCFA68E6B8E5F7EE57 /* Pods-Wink.release.xcconfig */,
+				C82F8CDD4A6AB156D6C45EA0 /* Pods-WinkTests.debug.xcconfig */,
+				37B6FA6FC5A115C740554032 /* Pods-WinkTests.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		5BE5B24E05312EC6586EBDC8 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				15F8702344D65F128686B62D /* Assets.xcassets */,
+				5BD37186DFDE5A340758982C /* hand_landmarker.task */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		70FB9AC37224264EB95E3F59 /* Wink */ = {
+			isa = PBXGroup;
+			children = (
+				D2F4FD5DD75BC16A1FA1F2C6 /* Info.plist */,
+				3AA9FD4F36A32D568BFED8E1 /* Wink.entitlements */,
+				BBC6406DB860934579E94784 /* WinkApp.swift */,
+				93C819401F3C813A19A1B825 /* WinkController.swift */,
+				063AEAFBBCD3B9D529B70A8E /* Config */,
+				5BE5B24E05312EC6586EBDC8 /* Resources */,
+				C373140BA06EEDBFCCF57003 /* Services */,
+				363F56759E1530C75F7A0A35 /* Views */,
+			);
+			path = Wink;
+			sourceTree = "<group>";
+		};
+		98C5C3E79F882CC8A8F85B6D /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				7A961D7DD5E7C0477D7C69EC /* Wink.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		C373140BA06EEDBFCCF57003 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				E38BDF618306E375340B190B /* LocationProvider.swift */,
+				E991A8B7665FF029C1318404 /* API */,
+				033FFF2E2F0576A6EA9B65A6 /* Camera */,
+				0E0BB8C84A3C33A92ADF4721 /* Gestures */,
+				E797AAC67FC95F276CDC6C52 /* Voice */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		D8DA31506748F58CE73D8E83 /* WinkTests */ = {
+			isa = PBXGroup;
+			children = (
+				76FA9D26F5F14885A190C12F /* GestureClassifierTests.swift */,
+				B2037BA9D750D1F08FD270EA /* IntentParserTests.swift */,
+			);
+			path = WinkTests;
+			sourceTree = "<group>";
+		};
+		E797AAC67FC95F276CDC6C52 /* Voice */ = {
+			isa = PBXGroup;
+			children = (
+				58944FFBBF55A561F1867F02 /* AudioSessionManager.swift */,
+				D4F022D376F8756C5EDDD468 /* IntentParser.swift */,
+				8F46BBBE129A2F95F4201112 /* SpeechOut.swift */,
+				8B1623A8C533F000C262522E /* UtteranceSegmenter.swift */,
+				F48CAC95D17826D1374CAC7E /* WakePhrase.swift */,
+				1042C25C19723A760D8CB060 /* WakeWordListener.swift */,
+				1004F817BD6FC32E772F472D /* WhisperTranscriber.swift */,
+			);
+			path = Voice;
+			sourceTree = "<group>";
+		};
+		E991A8B7665FF029C1318404 /* API */ = {
+			isa = PBXGroup;
+			children = (
+				FF44A036A975F39AD7F6B4FF /* LiveSocket.swift */,
+				89182C1457B98407A8593F8A /* WinkAPIClient.swift */,
+				3CCA80A06CDC85B4C2124539 /* WinkModels.swift */,
+			);
+			path = API;
+			sourceTree = "<group>";
+		};
+		ED1A7FED1FD980E9D38DB1D4 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				464BED3B6C66DE0C1A170239 /* Pods_Wink.framework */,
+				3DE7BBA8D68A53C2E4D7180A /* Pods_WinkTests.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		994E8AFC16B6CBDF59763638 /* WinkTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 31E1AF5120AD4224C92DE2B9 /* Build configuration list for PBXNativeTarget "WinkTests" */;
+			buildPhases = (
+				C139A3110A5D5D43CBA88982 /* [CP] Check Pods Manifest.lock */,
+				F07471BA3B9A3033037033FE /* Sources */,
+				F9D97EDE66A555F6A954FC46 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F37619472DD6A18A418758A6 /* PBXTargetDependency */,
+			);
+			name = WinkTests;
+			productName = WinkTests;
+			productReference = 2D91489EDE2C707E281972C2 /* WinkTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		DAED9FC1F571B5B293148D91 /* Wink */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7324E7A8D186E03BA8ECFC69 /* Build configuration list for PBXNativeTarget "Wink" */;
+			buildPhases = (
+				85575F6E44FCE5311F9E4BF4 /* [CP] Check Pods Manifest.lock */,
+				36848C59F61BA62699E415AB /* Sources */,
+				C681C5F77A84B631E00D86A2 /* Resources */,
+				33ECD79F4D1B702EA23F6F9C /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Wink;
+			packageProductDependencies = (
+				6F9DD2220127FC317066E7DF /* WhisperKit */,
+				0216A5B906E6076FD2AAEF88 /* MWDATCore */,
+				71A054F4E296C566BE237E8A /* MWDATCamera */,
+				6FB7A737082AD01050AD8C66 /* MWDATMockDevice */,
+			);
+			productName = Wink;
+			productReference = 5D5D35445F088EF07CEBE8DA /* Wink.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FCD78D3D2C6D3945AA50080D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					994E8AFC16B6CBDF59763638 = {
+						DevelopmentTeam = BW3XQ8353L;
+						ProvisioningStyle = Automatic;
+					};
+					DAED9FC1F571B5B293148D91 = {
+						DevelopmentTeam = BW3XQ8353L;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = F6EFF165E18EA359454351D2 /* Build configuration list for PBXProject "Wink" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 3193B45CD2CA4F1F8B405D4F;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BF59783604F5DC72A439F9B7 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */,
+				01E01C802061B20D0D2B521F /* XCRemoteSwiftPackageReference "argmax-oss-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 019B819ADFECC653225B48E4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DAED9FC1F571B5B293148D91 /* Wink */,
+				994E8AFC16B6CBDF59763638 /* WinkTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C681C5F77A84B631E00D86A2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				49ED13D3CE0C56284D982A58 /* Assets.xcassets in Resources */,
+				0E71BC355219166B02BC2E08 /* hand_landmarker.task in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		85575F6E44FCE5311F9E4BF4 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-Wink-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		C139A3110A5D5D43CBA88982 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-WinkTests-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		36848C59F61BA62699E415AB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D3A2DAE61C792AA307671B08 /* AudioSessionManager.swift in Sources */,
+				6ECDB34CCF6DDF5E433B8504 /* ContentView.swift in Sources */,
+				C6CD0DE22B8C3BC629F36BD6 /* FrameSource.swift in Sources */,
+				99DD1E4DB8ACF2FB7AF80F99 /* GestureClassifier.swift in Sources */,
+				8D925CD165E7DB6D0CDC98C7 /* GesturePipeline.swift in Sources */,
+				AAE2505CAA5FB678CEB0D4FA /* GlassesFrameSource.swift in Sources */,
+				B1E8B2F5AEC3983A8C75C7BD /* HandTracker.swift in Sources */,
+				CEF2D57A8C830F16F59958CE /* ImageUtils.swift in Sources */,
+				968375366587CDC5D6F812E0 /* IntentParser.swift in Sources */,
+				C517DCDEEE8B62F2F3973CD6 /* LiveSocket.swift in Sources */,
+				59F0749A85A9ED37DC34D8F8 /* LocationProvider.swift in Sources */,
+				0B483A5BE66C41B1C5625EFB /* MediaPipeHandTracker.swift in Sources */,
+				15A5D9384A4A8B8F3675EDAA /* PhoneFrameSource.swift in Sources */,
+				EF1B61842CE40714A11AF033 /* PreviewView.swift in Sources */,
+				29700D8EA93EB70888456F43 /* SettingsView.swift in Sources */,
+				6B76555430A9CE6CB1796095 /* SpeechOut.swift in Sources */,
+				54A5CD4D0A8B9B964D1F0EC1 /* UtteranceSegmenter.swift in Sources */,
+				B0C162B37DEBA9A9052C2387 /* VisionHandTracker.swift in Sources */,
+				9D0B29F5F035A74C19102015 /* WakePhrase.swift in Sources */,
+				DB35A5131036D225BB535A20 /* WakeWordListener.swift in Sources */,
+				650EBA10AB902AD80B2CFE67 /* WhisperTranscriber.swift in Sources */,
+				A1BC8F52F56814816515B12C /* WinkAPIClient.swift in Sources */,
+				D02FD52DBF66BFAB34AEC385 /* WinkApp.swift in Sources */,
+				66C20D0995A8348B4FBFF434 /* WinkConfig.swift in Sources */,
+				CBFCB54044BC1977DAAA5B8E /* WinkController.swift in Sources */,
+				C1A2F4DB81D634DD453402FF /* WinkModels.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F07471BA3B9A3033037033FE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				700F12EC4E6946A2DA18C8D4 /* GestureClassifierTests.swift in Sources */,
+				13AF48417FB83D4BEDFF320F /* IntentParserTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F37619472DD6A18A418758A6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DAED9FC1F571B5B293148D91 /* Wink */;
+			targetProxy = EDB49E92A9C4E4CB6A38E663 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		07422112E1FD71648A07FA2D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C82F8CDD4A6AB156D6C45EA0 /* Pods-WinkTests.debug.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.arboymagomba.WinkTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Wink.app/Wink";
+			};
+			name = Debug;
+		};
+		3570762EB7A22F3B4295EDFB /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 37B6FA6FC5A115C740554032 /* Pods-WinkTests.release.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.arboymagomba.WinkTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Wink.app/Wink";
+			};
+			name = Release;
+		};
+		62C91E46B7D61D57430519DD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1C5FC4B2299796DE0B5D06D5 /* Pods-Wink.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Wink/Wink.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Wink/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arboymagomba.Wink;
+				PRODUCT_NAME = Wink;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		757272F7391622A715503F1B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7A961D7DD5E7C0477D7C69EC /* Wink.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = BW3XQ8353L;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		7955A1A30701827AD34262F3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7A961D7DD5E7C0477D7C69EC /* Wink.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = BW3XQ8353L;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		FBF39FDD82E7D6FE5A345D70 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6EB633CCFA68E6B8E5F7EE57 /* Pods-Wink.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Wink/Wink.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Wink/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arboymagomba.Wink;
+				PRODUCT_NAME = Wink;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		31E1AF5120AD4224C92DE2B9 /* Build configuration list for PBXNativeTarget "WinkTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				07422112E1FD71648A07FA2D /* Debug */,
+				3570762EB7A22F3B4295EDFB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7324E7A8D186E03BA8ECFC69 /* Build configuration list for PBXNativeTarget "Wink" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				62C91E46B7D61D57430519DD /* Debug */,
+				FBF39FDD82E7D6FE5A345D70 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F6EFF165E18EA359454351D2 /* Build configuration list for PBXProject "Wink" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				757272F7391622A715503F1B /* Debug */,
+				7955A1A30701827AD34262F3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		01E01C802061B20D0D2B521F /* XCRemoteSwiftPackageReference "argmax-oss-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/argmax-oss-swift";
+			requirement = {
+				kind = exactVersion;
+				version = 1.1.1;
+			};
+		};
+		BF59783604F5DC72A439F9B7 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/meta-wearables-dat-ios";
+			requirement = {
+				kind = exactVersion;
+				version = 1.0.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0216A5B906E6076FD2AAEF88 /* MWDATCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BF59783604F5DC72A439F9B7 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATCore;
+		};
+		6F9DD2220127FC317066E7DF /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 01E01C802061B20D0D2B521F /* XCRemoteSwiftPackageReference "argmax-oss-swift" */;
+			productName = WhisperKit;
+		};
+		6FB7A737082AD01050AD8C66 /* MWDATMockDevice */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BF59783604F5DC72A439F9B7 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATMockDevice;
+		};
+		71A054F4E296C566BE237E8A /* MWDATCamera */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BF59783604F5DC72A439F9B7 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATCamera;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = FCD78D3D2C6D3945AA50080D /* Project object */;
+}

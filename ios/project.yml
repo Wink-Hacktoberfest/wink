@@ -1,0 +1,75 @@
+name: Wink
+options:
+  bundleIdPrefix: com.arboymagomba
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+configFiles:
+  Debug: Config/Wink.xcconfig
+  Release: Config/Wink.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY: YES
+    DEVELOPMENT_TEAM: BW3XQ8353L
+    CODE_SIGN_STYLE: Automatic
+    TARGETED_DEVICE_FAMILY: "1"
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+packages:
+  WhisperKit:
+    url: https://github.com/argmaxinc/argmax-oss-swift
+    exactVersion: 1.1.1
+  MWDAT:
+    url: https://github.com/facebook/meta-wearables-dat-ios
+    exactVersion: 1.0.1
+targets:
+  Wink:
+    type: application
+    platform: iOS
+    sources:
+      - path: Wink
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.arboymagomba.Wink
+        PRODUCT_NAME: Wink
+        INFOPLIST_FILE: Wink/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Wink/Wink.entitlements
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    dependencies:
+      - package: WhisperKit
+        product: WhisperKit
+      - package: MWDAT
+        product: MWDATCore
+      - package: MWDAT
+        product: MWDATCamera
+      - package: MWDAT
+        product: MWDATMockDevice
+  WinkTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: WinkTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.arboymagomba.WinkTests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Wink.app/Wink"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+    dependencies:
+      - target: Wink
+schemes:
+  Wink:
+    build:
+      targets:
+        Wink: all
+        WinkTests: [test]
+    test:
+      targets:
+        - WinkTests

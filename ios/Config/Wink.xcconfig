@@ -1,0 +1,6 @@
+// Shared build settings. Secrets live in Secrets.xcconfig (gitignored); copy Secrets.example.xcconfig to create it.
+WINK_API_BASE_URL = http:/$()/localhost:8787
+WINK_TOKEN = dev-token
+META_APP_ID = 0
+CLIENT_TOKEN =
+#include? "Secrets.xcconfig"

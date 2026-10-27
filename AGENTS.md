@@ -56,9 +56,13 @@ npm run dev -- --ip 0.0.0.0     # phone on the same Wi-Fi uses http://<mac-lan-i
 
 ### iOS (`ios/`)
 ```bash
-cd ios && xcodegen generate && pod install
+cd ios && xcodegen generate && LANG=en_US.UTF-8 pod install
 xcodebuild -workspace Wink.xcworkspace -scheme Wink -destination 'generic/platform=iOS Simulator' build
 ```
+- `pod install` crashes under Ruby 4 without `LANG=en_US.UTF-8`.
+- Packages: WhisperKit 1.1.1 (`argmax-oss-swift`), Meta DAT 1.0.1 (`MWDATCore`, `MWDATCamera`, `MWDATMockDevice`), CocoaPods `MediaPipeTasksVision` 1.0.0. A `post_integrate` hook in the Podfile keeps MediaPipe out of `WinkTests` (otherwise the test host crashes).
+- Gestures use MediaPipe; Apple Vision hand pose (`VisionHandTracker`) takes over automatically only if the MediaPipe model fails to load.
+- Glasses code paths are marked `// TODO(glasses):` and are untested until run with real glasses. Settings has a Debug-only "Enable mock glasses" (MWDATMockDevice) and a typed-command box for testing without speaking.
 - Always open **`Wink.xcworkspace`**, not the `.xcodeproj` (CocoaPods).
 - Files are listed in `ios/project.yml`. After adding or removing files, re-run `xcodegen generate` then `pod install`. Don't hand-edit `project.pbxproj`.
 - Secrets: copy `ios/Config/Secrets.example.xcconfig` → `ios/Config/Secrets.xcconfig` (ignored). The base URL and token can also be changed in the in-app settings sheet.
@@ -98,13 +102,13 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 |---|---|---|---|
 | Repo, PRD, contract, agent docs | Arboy | ✅ | 2026-10-26 18:55 |
 | Backend scaffold (routes, MOCK, LiveRoom, TV, Snowflake SQL) | Messi | ✅ | MOCK end to end; real DO/Snowflake calls untested |
-| iOS scaffold (XcodeGen, WhisperKit, DAT, MediaPipe) | Arboy | 🟡 | scaffolded, see ios/README.md |
-| A1 glasses camera stream | Arboy | ⬜ | |
-| A2 wake word + push-to-talk | Arboy | ⬜ | |
-| A3 intents → API | Arboy | ⬜ | |
-| A4 speech into glasses | Arboy | ⬜ | |
-| A5 gestures + selection crop | Arboy | ⬜ | |
-| A6 live socket events / pointer | Arboy | ⬜ | |
+| iOS scaffold (XcodeGen, WhisperKit, DAT, MediaPipe) | Arboy | ✅ | builds; 9 unit tests pass; ran in simulator against MOCK |
+| A1 glasses camera stream | Arboy | 🟡 | code written, untested on glasses (`TODO(glasses)`), check frame orientation |
+| A2 wake word + push-to-talk | Arboy | 🟡 | code written; Whisper base.en loads; voice loop untested on device |
+| A3 intents → API | Arboy | ✅ | every route verified against MOCK |
+| A4 speech into glasses | Arboy | 🟡 | HFP routing untested on device |
+| A5 gestures + selection crop | Arboy | 🟡 | thresholds tuned on synthetic hands only; tune on real footage |
+| A6 live socket events / pointer | Arboy | ✅ | socket connects; flick only sends the event, TV decides what to delete |
 | M1 keys (DO, Snowflake PAT, R2, token) | Arboy | ⬜ | accounts are Arboy's |
 | M2 `/memories` real | Messi | ⬜ | |
 | M3 `/ask` real | Messi | ⬜ | |
@@ -119,6 +123,7 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 
 Newest first. Format: `HH:MM from → to: message`.
 
+- 19:20 Arboy → Messi: iOS app is in (PR from `arboy/ios-scaffold`). It sends `flick` gesture events only; the TV must pick the highlighted memory and call `DELETE`. "Forget that" is confirmed with a thumbs up before the app calls `DELETE`.
 - 19:05 Arboy → Messi: backend scaffold is on `main` and passes `npm run check` (18 tests) + `npm run build`. MOCK mode works end to end, including `/tv`. Your next steps are code only: harden the real paths in `src/inference.ts`, `src/snowflake.ts` and `routes/`, then polish the TV (M5). Arboy connects the accounts and deploys. Scaffold choices to know about:
   - With `MOCK=true` and no `WINK_TOKEN`, auth is skipped. With `MOCK=false` and no token, authenticated routes return 503.
   - `GET /v1/health` is public.
