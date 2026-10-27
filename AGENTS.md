@@ -56,9 +56,13 @@ npm run dev -- --ip 0.0.0.0     # phone on the same Wi-Fi uses http://<mac-lan-i
 
 ### iOS (`ios/`)
 ```bash
-cd ios && xcodegen generate && pod install
+cd ios && xcodegen generate && LANG=en_US.UTF-8 pod install
 xcodebuild -workspace Wink.xcworkspace -scheme Wink -destination 'generic/platform=iOS Simulator' build
 ```
+- `pod install` crashes under Ruby 4 without `LANG=en_US.UTF-8`.
+- Packages: WhisperKit 1.1.1 (`argmax-oss-swift`), Meta DAT 1.0.1 (`MWDATCore`, `MWDATCamera`, `MWDATMockDevice`), CocoaPods `MediaPipeTasksVision` 1.0.0. A `post_integrate` hook in the Podfile keeps MediaPipe out of `WinkTests` (otherwise the test host crashes).
+- Gestures use MediaPipe; Apple Vision hand pose (`VisionHandTracker`) takes over automatically only if the MediaPipe model fails to load.
+- Glasses code paths are marked `// TODO(glasses):` and are untested until run with real glasses. Settings has a Debug-only "Enable mock glasses" (MWDATMockDevice) and a typed-command box for testing without speaking.
 - Always open **`Wink.xcworkspace`**, not the `.xcodeproj` (CocoaPods).
 - Files are listed in `ios/project.yml`. After adding or removing files, re-run `xcodegen generate` then `pod install`. Don't hand-edit `project.pbxproj`.
 - Secrets: copy `ios/Config/Secrets.example.xcconfig` → `ios/Config/Secrets.xcconfig` (ignored). The base URL and token can also be changed in the in-app settings sheet.
@@ -98,14 +102,14 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 |---|---|---|---|
 | Repo, PRD, contract, agent docs | Arboy | ✅ | 2026-10-26 18:55 |
 | Backend scaffold (routes, MOCK, LiveRoom, TV, Snowflake SQL) | Messi | ✅ | MOCK end to end; real DO/Snowflake calls untested |
-| iOS scaffold (XcodeGen, WhisperKit, DAT, MediaPipe) | Arboy | 🟡 | scaffolded, see ios/README.md |
-| A1 glasses camera stream | Arboy | ⬜ | |
-| A2 wake word + push-to-talk | Arboy | ⬜ | |
-| A3 intents → API | Arboy | ⬜ | |
-| A4 speech into glasses | Arboy | ⬜ | |
-| A5 gestures + selection crop | Arboy | ⬜ | |
-| A6 live socket events / pointer | Arboy | ⬜ | |
-| M1 keys (DO, Snowflake PAT, R2, token) | Arboy | ⬜ | accounts are Arboy's |
+| iOS scaffold (XcodeGen, WhisperKit, DAT, MediaPipe) | Arboy | ✅ | builds; 9 unit tests pass; ran in simulator against MOCK |
+| A1 glasses camera stream | Arboy | 🟡 | code written, untested on glasses (`TODO(glasses)`), check frame orientation |
+| A2 wake word + push-to-talk | Arboy | 🟡 | code written; Whisper base.en loads; voice loop untested on device |
+| A3 intents → API | Arboy | ✅ | every route verified against MOCK |
+| A4 speech into glasses | Arboy | 🟡 | HFP routing untested on device |
+| A5 gestures + selection crop | Arboy | 🟡 | thresholds tuned on synthetic hands only; tune on real footage |
+| A6 live socket events / pointer | Arboy | ✅ | socket connects; flick only sends the event, TV decides what to delete |
+| A8 keys (DO, Snowflake PAT, R2, token) | Arboy | ⬜ | accounts are Arboy's |
 | M1 provider reliability | Messi | ✅ | bounded calls, final-only chat, Workers AI fallback; tested with stubbed providers |
 | M2 `/memories` real | Messi | ✅ | code + real-route transport tests; R2 cleanup and retryable deletion; live account check pending |
 | M3 `/ask` real | Messi | ✅ | vector retrieval + grounded chat/fallback; live provider check pending |
@@ -120,6 +124,7 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 
 Newest first. Format: `HH:MM from → to: message`.
 
+- 19:20 Arboy → Messi: iOS app is in (PR from `arboy/ios-scaffold`). It sends `flick` gesture events only; the TV must pick the highlighted memory and call `DELETE`. "Forget that" is confirmed with a thumbs up before the app calls `DELETE`.
 - 19:13 Messi → Arboy: backend implementation is ready on `messi/backend-complete` locally. Typecheck + 61 tests + dry-run build pass; HTTP/WebSocket smoke confirms save → ask → nearby → delete and TV broadcasts. API contract unchanged; no iOS files edited. `npm run dev` now uses a local-only MOCK config (no Cloudflare account); `npm run smoke` tests the running server (`WINK_BASE_URL` overrides port). Use `npm run dev:real` for accounts configured in `wrangler.jsonc`.
   - Finish the account checklist below, accept the Workers AI vision model license once in your account if using fallback, then run the real save/glance/ask/nearby/delete checks. The Worker no longer accepts license terms automatically.
   - Run `snowflake/04_verify.sql` as `WINK_APP`; confirm the actual Overture table has GEOGRAPHY and current TAXONOMY or legacy CATEGORIES. Runtime detects that column and handles native/wrapped arrays; CoCo must confirm real category ids and distances. See `snowflake/README.md` for exact screenshot prompts. M8 is pending actual evidence, not completed by local tests.

@@ -1,0 +1,28 @@
+platform :ios, '18.0'
+
+target 'Wink' do
+  use_frameworks! :linkage => :static
+  pod 'MediaPipeTasksVision'
+
+  target 'WinkTests' do
+    inherit! :search_paths
+  end
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |t|
+    t.build_configurations.each do |c|
+      c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '18.0'
+    end
+  end
+end
+
+# MediaPipe force-loads its calculator graph; loading it into both the app and the
+# test bundle registers every calculator twice and aborts at launch. The tests use the
+# app as their host, so only the app links the graph.
+post_integrate do |installer|
+  Dir.glob(File.join(installer.sandbox.root, 'Target Support Files/Pods-WinkTests/*.xcconfig')).each do |f|
+    kept = File.read(f).lines.reject { |l| l.include?('-force_load') }.join
+    File.write(f, kept)
+  end
+end
