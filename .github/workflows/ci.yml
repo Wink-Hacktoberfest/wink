@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (typecheck, tests, build, MOCK smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      WRANGLER_SEND_METRICS: "false"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - name: MOCK smoke test (HTTP + WebSocket)
+        run: |
+          npm run dev -- --port 8787 > wrangler.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8787/v1/health > /dev/null 2>&1 && break
+            sleep 1
+          done
+          WINK_BASE_URL=http://127.0.0.1:8787 npm run smoke
+      - name: Wrangler log
+        if: failure()
+        run: cat wrangler.log || true
+
+  ios:
+    name: iOS (build + unit tests, simulator)
+    runs-on: macos-26
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode version
+        run: xcodebuild -version
+      - uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
+      - uses: actions/cache@v4
+        with:
+          path: ios/.spm
+          key: spm-${{ runner.os }}-${{ hashFiles('ios/Wink.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+      - name: pod install
+        env:
+          LANG: en_US.UTF-8
+        run: pod install
+      - name: Pick a simulator
+        run: |
+          udid=$(xcrun simctl list devices available -j \
+            | jq -r '[.devices | to_entries[] | select(.key | contains("iOS")) | .value[] | select(.name | startswith("iPhone"))] | last | .udid')
+          echo "Using simulator $udid"
+          echo "SIM_UDID=$udid" >> "$GITHUB_ENV"
+      - name: Build and test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -workspace Wink.xcworkspace -scheme Wink \
+            -destination "id=$SIM_UDID" \
+            -clonedSourcePackagesDirPath .spm \
+            -skipPackagePluginValidation -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee xcodebuild.log | grep -E "error:|Test Suite|Executed|\*\* (BUILD|TEST)"
+      - name: xcodebuild log
+        if: failure()
+        run: tail -200 xcodebuild.log || true
