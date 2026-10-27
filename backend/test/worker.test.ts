@@ -170,3 +170,94 @@ test('upload without an image is a 400', async () => {
   assert.equal(response.status, 400);
   assert.equal(((await response.json()) as { error: { code: string } }).error.code, 'missing_image');
 });
+
+test('deletion keeps the row retryable when R2 fails and images are never cached', async () => {
+  const { env, images, sent } = environment();
+  const response = await call(env, 'POST', '/v1/memories', upload({ note: 'book' }));
+  const { memory } = await response.json() as { memory: { id: string; imageUrl: string } };
+  const image = await call(env, 'GET', new URL(memory.imageUrl).pathname);
+  assert.equal(image.headers.get('cache-control'), 'no-store');
+  const remove = env.IMAGES.delete;
+  env.IMAGES.delete = async () => { throw new Error('R2 unavailable'); };
+  assert.equal((await call(env, 'DELETE', `/v1/memories/${memory.id}`)).status, 502);
+  const list = await (await call(env, 'GET', '/v1/memories')).json() as { memories: Array<{ id: string }> };
+  assert.ok(list.memories.some((m) => m.id === memory.id));
+  assert.equal(sent.filter((event) => event.type === 'memory.deleted').length, 0);
+  env.IMAGES.delete = remove;
+  assert.equal((await call(env, 'DELETE', `/v1/memories/${memory.id}`)).status, 204);
+  assert.equal(images.size, 0);
+});
+
+function realEnvironment() {
+  return environment({ MOCK: 'false', SNOWFLAKE_ACCOUNT_URL: 'https://example.snowflakecomputing.com', SNOWFLAKE_PAT: 'test-pat',
+    DO_MODEL_ACCESS_KEY: 'test-model-key', VISION_PROVIDER: 'workers-ai',
+    AI: { async run() { return { response: JSON.stringify({ title: 'Project Hail Mary', summary: 'A science fiction book.', objects: ['book'], visibleText: 'Andy Weir' }) }; } },
+  });
+}
+
+function sqlResult(values: Record<string, unknown>[]) {
+  const names = Object.keys(values[0] ?? {});
+  return Response.json({ resultSetMetaData: { rowType: names.map((name) => ({ name })) }, data: values.map((row) => names.map((key) => row[key])) });
+}
+
+test('real routes: vision → R2 → embedded SQL insert → search/answer → delete', async () => {
+  const { env, images, sent } = realEnvironment();
+  let row: Record<string, string | null> | undefined;
+  let insertStatement = '';
+  mock.method(globalThis, 'fetch', async (input: string, init: RequestInit) => {
+    assert.equal(init.redirect, 'manual');
+    if (input.startsWith('https://inference.do-ai.run/')) {
+      return Response.json({ choices: [{ finish_reason: 'stop', message: { content: 'That was Project Hail Mary by Andy Weir.' } }] });
+    }
+    const payload = JSON.parse(String(init.body)) as { statement: string; bindings?: Record<string, { value: string }> };
+    if (payload.statement.startsWith('INSERT')) {
+      insertStatement = payload.statement;
+      const keys = ['id', 'created_at', 'kind', 'title', 'summary', 'visible_text', 'objects', 'note', 'image_key', 'selection', 'lat', 'lng', 'place', 'product_query'];
+      row = Object.fromEntries(keys.map((key, i) => [key, payload.bindings![String(i + 1)]!.value || null]));
+      return sqlResult([{ rows: '1' }]);
+    }
+    if (payload.statement.startsWith('DELETE')) { row = undefined; return sqlResult([{ rows: '1' }]); }
+    return sqlResult(row ? [{ ...row, score: '0.9' }] : []);
+  });
+  const saved = await call(env, 'POST', '/v1/memories', upload({ note: 'book from Sam', location: null }));
+  assert.equal(saved.status, 201);
+  const { memory } = await saved.json() as { memory: { id: string; title: string; imageKey?: string } };
+  assert.equal(memory.title, 'Project Hail Mary');
+  assert.equal(memory.imageKey, undefined);
+  assert.match(insertStatement, /EMBED_TEXT_1024/);
+  assert.equal(images.size, 1);
+  const answer = await call(env, 'POST', '/v1/ask', { question: 'what was that book?' });
+  assert.equal(answer.status, 200);
+  const answerBody = await answer.json() as { speech: string; memories: Array<{ id: string; score?: number }> };
+  assert.match(answerBody.speech, /Andy Weir/);
+  assert.equal(answerBody.memories[0]?.id, memory.id);
+  assert.equal(answerBody.memories[0]?.score, undefined);
+  assert.equal((await call(env, 'DELETE', `/v1/memories/${memory.id}`)).status, 204);
+  assert.equal(images.size, 0);
+  assert.deepEqual(sent.map((event) => event.type), ['memory.saved', 'answer', 'memory.deleted']);
+});
+
+test('failed inserts clean images only on definite rejection, preserving ambiguous commits', async () => {
+  for (const [status, retained] of [[422, 0], [500, 1]] as const) {
+    const { env, images, sent } = realEnvironment();
+    const transport = mock.method(globalThis, 'fetch', async () => Response.json({ code: 'test' }, { status }));
+    assert.equal((await call(env, 'POST', '/v1/memories', upload({ note: 'book' }))).status, 502);
+    assert.equal(images.size, retained);
+    assert.equal(sent.length, 0);
+    transport.mock.restore();
+  }
+  const { env, images, sent } = realEnvironment();
+  mock.method(globalThis, 'fetch', async (_input: string, init: RequestInit) => init.method === 'POST'
+    ? Response.json({ statementHandle: 'accepted' }, { status: 202 })
+    : Response.json({ code: 'expired-token' }, { status: 401 }));
+  assert.equal((await call(env, 'POST', '/v1/memories', upload({ note: 'book' }))).status, 502);
+  assert.equal(images.size, 1);
+  assert.equal(sent.length, 0);
+});
+
+test('invalid route escapes, spoofed live events, and missing nearby memories return contract errors', async () => {
+  const { env } = environment();
+  assert.equal((await call(env, 'DELETE', '/v1/memories/%FF')).status, 400);
+  assert.equal((await call(env, 'POST', '/v1/events', { type: 'gesture', gesture: 'point', box: { x: 'bad' } })).status, 400);
+  assert.equal((await call(env, 'POST', '/v1/nearby', { memoryId: 'missing', location: { lat: 35, lng: -97 } })).status, 404);
+});

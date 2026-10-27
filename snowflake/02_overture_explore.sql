@@ -14,6 +14,9 @@ USE WAREHOUSE WINK_WH;
 SHOW SCHEMAS IN DATABASE OVERTURE_MAPS__PLACES;
 SHOW TABLES IN SCHEMA OVERTURE_MAPS__PLACES.CARTO;
 DESCRIBE TABLE OVERTURE_MAPS__PLACES.CARTO.PLACE;
+-- The current Overture docs use TAXONOMY; older releases use CATEGORIES.
+-- Inspect DESCRIBE first and replace TAXONOMY below if only CATEGORIES exists.
+-- The Worker detects this automatically and caches the schema for 5 minutes.
 
 -- 2. Size.
 SELECT COUNT(*) AS places FROM OVERTURE_MAPS__PLACES.CARTO.PLACE;
@@ -24,44 +27,56 @@ SELECT * FROM OVERTURE_MAPS__PLACES.CARTO.PLACE LIMIT 10;
 -- 4. The Overture docs sample (phones/names use Parquet-style list wrappers).
 SELECT id, phones['list'][0]['element'] AS phone, names['primary'] AS name
 FROM OVERTURE_MAPS__PLACES.CARTO.PLACE
-WHERE categories['primary'] = 'restaurant'
+WHERE taxonomy['primary'] = 'restaurant'
 LIMIT 10;
 
--- 5. Nested shapes Wink depends on (NAMES, CATEGORIES, PHONES, ADDRESSES, GEOMETRY).
+-- 5. Nested shapes Wink depends on (NAMES, TAXONOMY, PHONES, ADDRESSES, GEOMETRY).
 SELECT
   ID,
   NAMES:primary::STRING                       AS name,
-  CATEGORIES:primary::STRING                  AS category,
-  CATEGORIES:alternate                        AS alternate_categories,
+  TAXONOMY:primary::STRING                  AS category,
+  TAXONOMY:alternate                        AS alternate_categories,
   PHONES:list[0]:element::STRING              AS phone,
   ADDRESSES                                   AS raw_addresses,
   ADDRESSES:list[0]:element:freeform::STRING  AS street,
   ADDRESSES:list[0]:element:locality::STRING  AS city,
   ADDRESSES:list[0]:element:region::STRING    AS region,
-  TYPEOF(GEOMETRY)                            AS geometry_type,   -- expect GEOGRAPHY
+  SYSTEM$TYPEOF(GEOMETRY)                     AS geometry_type,   -- must be GEOGRAPHY for meter distances
   ST_Y(GEOMETRY) AS lat, ST_X(GEOMETRY) AS lng
 FROM OVERTURE_MAPS__PLACES.CARTO.PLACE
 WHERE ADDRESSES IS NOT NULL
 LIMIT 20;
 
+-- 5b. Compare legacy Parquet wrappers with native arrays before enabling nearby.
+SELECT ID,
+  COALESCE(PHONES:list[0]:element::STRING, PHONES[0]::STRING) AS phone,
+  COALESCE(ADDRESSES:list[0]:element:freeform::STRING, ADDRESSES[0]:freeform::STRING) AS street,
+  COALESCE(ADDRESSES:list[0]:element:locality::STRING, ADDRESSES[0]:locality::STRING) AS locality,
+  COALESCE(ADDRESSES:list[0]:element:region::STRING, ADDRESSES[0]:region::STRING) AS region
+FROM OVERTURE_MAPS__PLACES.CARTO.PLACE LIMIT 20;
+-- If GEOMETRY is a Snowflake GEOMETRY (planar), distances are not meters.
+-- Ask CoCo for a normalized view exposing a GEOGRAPHY named GEOMETRY and the same other columns;
+-- for SRID 4326, TO_GEOGRAPHY(GEOMETRY) converts it. For WKB/WKT, TRY_TO_GEOGRAPHY works.
+-- Point OVERTURE_PLACES_TABLE at that view and repeat the distance checks below.
+
 -- 6. Category distribution (which ids to map "books", "wine", "coffee" to).
-SELECT CATEGORIES:primary::STRING AS category, COUNT(*) AS n
+SELECT TAXONOMY:primary::STRING AS category, COUNT(*) AS n
 FROM OVERTURE_MAPS__PLACES.CARTO.PLACE
 GROUP BY 1
 ORDER BY n DESC
 LIMIT 100;
 
 -- 7. Categories that look like shops Wink cares about.
-SELECT CATEGORIES:primary::STRING AS category, COUNT(*) AS n
+SELECT TAXONOMY:primary::STRING AS category, COUNT(*) AS n
 FROM OVERTURE_MAPS__PLACES.CARTO.PLACE
-WHERE CATEGORIES:primary::STRING ILIKE ANY ('%book%', '%wine%', '%liquor%', '%coffee%', '%shoe%', '%florist%', '%hardware%', '%pharmacy%')
+WHERE TAXONOMY:primary::STRING ILIKE ANY ('%book%', '%wine%', '%liquor%', '%coffee%', '%shoe%', '%florist%', '%hardware%', '%pharmacy%')
 GROUP BY 1
 ORDER BY n DESC;
 
 -- 8. Places near the demo table (Norman, OK; replace with your lat/lng). ST_MAKEPOINT takes (lng, lat).
 SELECT
   NAMES:primary::STRING      AS name,
-  CATEGORIES:primary::STRING AS category,
+  TAXONOMY:primary::STRING AS category,
   ROUND(ST_DISTANCE(GEOMETRY, ST_MAKEPOINT(-97.4457, 35.2059))) AS meters
 FROM OVERTURE_MAPS__PLACES.CARTO.PLACE
 WHERE ST_DWITHIN(GEOMETRY, ST_MAKEPOINT(-97.4457, 35.2059), 3000)
@@ -71,12 +86,12 @@ LIMIT 25;
 -- 9. Book stores within 3 km (the shape of the app's nearby query).
 SELECT
   NAMES:primary::STRING      AS name,
-  CATEGORIES:primary::STRING AS category,
+  TAXONOMY:primary::STRING AS category,
   PHONES:list[0]:element::STRING AS phone,
   ROUND(ST_DISTANCE(GEOMETRY, ST_MAKEPOINT(-97.4457, 35.2059))) AS meters
 FROM OVERTURE_MAPS__PLACES.CARTO.PLACE
 WHERE ST_DWITHIN(GEOMETRY, ST_MAKEPOINT(-97.4457, 35.2059), 3000)
-  AND (CATEGORIES:primary::STRING IN ('book_store', 'used_bookstore')
+  AND (TAXONOMY:primary::STRING IN ('book_store', 'used_bookstore')
        OR REGEXP_LIKE(NAMES:primary::STRING, '.*(books).*', 'i'))
 ORDER BY meters
 LIMIT 5;

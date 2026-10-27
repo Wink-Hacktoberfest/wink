@@ -1,3 +1,5 @@
+import { parseClientEvent } from './events.ts';
+import { HttpError } from './http.ts';
 import { seedMemories } from './mock.ts';
 import type { Env, LiveEvent, StoredMemory } from './types.ts';
 
@@ -28,6 +30,8 @@ export type BroadcastTarget = 'all' | 'tv';
  * - /mock/memories keeps MOCK-mode memories so save → list → ask → delete feels real
  */
 export class LiveRoom {
+  private mockQueue: Promise<unknown> = Promise.resolve();
+  private readonly rates = new WeakMap<WebSocket, { pointer: number[]; frame: number[] }>();
   constructor(private readonly ctx: DurableObjectState, private readonly env: Env) {
     try {
       this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
@@ -50,7 +54,12 @@ export class LiveRoom {
       const sent = this.send(JSON.stringify(event), to === 'tv' ? 'tv' : undefined);
       return Response.json({ sent });
     }
-    if (url.pathname.startsWith('/mock/memories')) return this.mockMemories(request, url);
+    if (/^\/mock\/memories(?:\/[^/]+)?$/.test(url.pathname)) {
+      // Awaited storage reads can interleave; serialize demo mutations to avoid losing saves.
+      const work = this.mockQueue.then(() => this.mockMemories(request, url));
+      this.mockQueue = work.catch(() => undefined);
+      return work;
+    }
     if (url.pathname === '/stats') {
       return Response.json({ tv: this.ctx.getWebSockets('tv').length, glasses: this.ctx.getWebSockets('glasses').length });
     }
@@ -72,8 +81,21 @@ export class LiveRoom {
     if (typeof message !== 'string' || message.length > MAX_MESSAGE || message === 'ping') return;
     const tags = this.ctx.getTags(ws);
     if (!tags.includes('glasses')) return; // only the glasses drive the TV
-    if (!message.startsWith('{')) return;
-    this.send(message, 'tv');
+    let event: LiveEvent;
+    try { event = parseClientEvent(JSON.parse(message), true); } catch { return; }
+    if (event.type === 'pointer' || event.type === 'frame') {
+      const now = Date.now();
+      // Attachments survive hibernation, keeping high-rate event limits across wakeups.
+      const socket = ws as WebSocket & { deserializeAttachment?(): unknown; serializeAttachment?(value: unknown): void };
+      const previous = socket.deserializeAttachment?.() as { pointer: number[]; frame: number[] } | undefined;
+      const rates = previous ?? this.rates.get(ws) ?? { pointer: [], frame: [] };
+      rates[event.type] = rates[event.type].filter((time) => now - time < 1000);
+      if (rates[event.type].length >= (event.type === 'pointer' ? 20 : 2)) return;
+      rates[event.type].push(now);
+      this.rates.set(ws, rates);
+      socket.serializeAttachment?.(rates);
+    }
+    this.send(JSON.stringify(event), 'tv');
   }
 
   async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
@@ -130,6 +152,7 @@ export async function broadcast(env: Env, event: LiveEvent, to: BroadcastTarget 
       body: JSON.stringify({ event, to }),
     });
     await response.body?.cancel();
+    if (!response.ok) throw new Error(`Live room returned ${response.status}`);
   } catch (error) {
     console.error(`broadcast ${event.type} failed: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -147,5 +170,6 @@ export async function mockStore<T>(env: Env, method: string, id = '', body?: unk
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
+  if (!response.ok) throw new HttpError(502, 'storage_error', 'The demo memory store is unavailable.');
   return await response.json() as T;
 }

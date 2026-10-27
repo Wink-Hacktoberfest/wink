@@ -2,6 +2,9 @@
 -- Every binding is sent as TEXT through the SQL API v2. VECTORs can't be bound, so embeddings are
 -- computed inline with Cortex; arrays/objects arrive as JSON strings and go through PARSE_JSON,
 -- which is why the insert is INSERT ... SELECT rather than VALUES. '' means NULL (NULLIF).
+-- The Worker first DESCRIBEs the places table, selecting TAXONOMY for current Overture
+-- or CATEGORIES for legacy releases. Queries below show TAXONOMY; substitute CATEGORIES
+-- only when DESCRIBE confirms the older column. GEOMETRY must have type GEOGRAPHY.
 -- Session context per request: database WINK, schema APP, warehouse WINK_WH.
 
 -- Insert a memory (POST /v1/memories).
@@ -21,7 +24,11 @@ SELECT id,
 FROM MEMORIES ORDER BY created_at DESC LIMIT 50;
 
 -- One memory (POST /v1/nearby with memoryId). binds: id
-SELECT id, title, objects, product_query FROM MEMORIES WHERE id = ?;
+SELECT id,
+  TO_VARCHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.FF3TZH:TZM') AS created_at,
+  kind, title, summary, visible_text, TO_JSON(objects) AS objects, note, image_key,
+  TO_JSON(selection) AS selection, lat, lng, TO_JSON(place) AS place, product_query
+FROM MEMORIES WHERE id = ?;
 
 -- Vector search, top 3 (POST /v1/ask). binds: embed model, question
 -- The Worker drops matches below 0.30 cosine, or more than 0.12 below the best match.
@@ -44,30 +51,30 @@ DELETE FROM MEMORIES WHERE id = ?;
 --        name regex (e.g. '.*(books|book).*'; REGEXP_LIKE matches the whole string)
 SELECT ID AS id,
   NAMES:primary::STRING AS name,
-  CATEGORIES:primary::STRING AS category,
-  PHONES:list[0]:element::STRING AS phone,
-  ADDRESSES:list[0]:element:freeform::STRING AS street,
-  ADDRESSES:list[0]:element:locality::STRING AS locality,
-  ADDRESSES:list[0]:element:region::STRING AS region,
+  TAXONOMY:primary::STRING AS category,
+  COALESCE(PHONES:list[0]:element::STRING, PHONES[0]::STRING) AS phone,
+  COALESCE(ADDRESSES:list[0]:element:freeform::STRING, ADDRESSES[0]:freeform::STRING) AS street,
+  COALESCE(ADDRESSES:list[0]:element:locality::STRING, ADDRESSES[0]:locality::STRING) AS locality,
+  COALESCE(ADDRESSES:list[0]:element:region::STRING, ADDRESSES[0]:region::STRING) AS region,
   ST_Y(GEOMETRY) AS lat,
   ST_X(GEOMETRY) AS lng,
   ST_DISTANCE(GEOMETRY, ST_MAKEPOINT(?::FLOAT, ?::FLOAT)) AS meters
 FROM OVERTURE_MAPS__PLACES.CARTO.PLACE
 WHERE ST_DWITHIN(GEOMETRY, ST_MAKEPOINT(?::FLOAT, ?::FLOAT), ?::FLOAT)
-  AND (ARRAY_CONTAINS(CATEGORIES:primary, PARSE_JSON(?)::ARRAY)
+  AND (ARRAY_CONTAINS(TAXONOMY:primary, PARSE_JSON(?)::ARRAY)
        OR REGEXP_LIKE(NAMES:primary::STRING, ?, 'i'))
-ORDER BY meters
+ORDER BY meters, id
 LIMIT 5;
 
 -- Business match for a saved storefront (POST /v1/memories when the vision model reads a business name).
 -- binds: lng, lat, name, lng, lat, radius meters (250), name
 SELECT ID AS id,
   NAMES:primary::STRING AS name,
-  CATEGORIES:primary::STRING AS category,
-  PHONES:list[0]:element::STRING AS phone,
-  ADDRESSES:list[0]:element:freeform::STRING AS street,
-  ADDRESSES:list[0]:element:locality::STRING AS locality,
-  ADDRESSES:list[0]:element:region::STRING AS region,
+  TAXONOMY:primary::STRING AS category,
+  COALESCE(PHONES:list[0]:element::STRING, PHONES[0]::STRING) AS phone,
+  COALESCE(ADDRESSES:list[0]:element:freeform::STRING, ADDRESSES[0]:freeform::STRING) AS street,
+  COALESCE(ADDRESSES:list[0]:element:locality::STRING, ADDRESSES[0]:locality::STRING) AS locality,
+  COALESCE(ADDRESSES:list[0]:element:region::STRING, ADDRESSES[0]:region::STRING) AS region,
   ST_Y(GEOMETRY) AS lat,
   ST_X(GEOMETRY) AS lng,
   ST_DISTANCE(GEOMETRY, ST_MAKEPOINT(?::FLOAT, ?::FLOAT)) AS meters,

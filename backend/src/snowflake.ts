@@ -1,5 +1,6 @@
 import { HttpError, isRecord, providerFetch } from './http.ts';
-import type { Env, Location, Place, Selection, StoredMemory } from './types.ts';
+import { parseSelection } from './parse.ts';
+import type { Env, Location, Place, StoredMemory } from './types.ts';
 
 /** Minimum cosine similarity for a memory to count as a match in /v1/ask (Arctic Embed L v2.0). */
 export const ASK_MIN_SCORE = 0.3;
@@ -10,13 +11,23 @@ export const BUSINESS_MATCH_RADIUS_METERS = 250;
 
 type Row = Record<string, string | null>;
 
+/** Initial submission was explicitly rejected, so an INSERT could not have committed. */
+export class SnowflakeRejectedError extends HttpError {}
+
 function config(env: Env) {
   const accountUrl = env.SNOWFLAKE_ACCOUNT_URL?.trim().replace(/\/+$/, '');
   const pat = env.SNOWFLAKE_PAT?.trim();
   if (!accountUrl || !pat) {
     throw new HttpError(503, 'not_configured', 'Snowflake is not configured (SNOWFLAKE_ACCOUNT_URL, SNOWFLAKE_PAT).');
   }
-  return { accountUrl, pat };
+  let url: URL;
+  try { url = new URL(accountUrl); } catch {
+    throw new HttpError(503, 'not_configured', 'SNOWFLAKE_ACCOUNT_URL must be an HTTPS account origin.');
+  }
+  if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
+    throw new HttpError(503, 'not_configured', 'SNOWFLAKE_ACCOUNT_URL must be an HTTPS account origin.');
+  }
+  return { accountUrl: url.origin, pat };
 }
 
 function headers(pat: string): Record<string, string> {
@@ -29,17 +40,48 @@ function headers(pat: string): Record<string, string> {
   };
 }
 
-function rowsFrom(body: Record<string, unknown>): Row[] {
-  const meta = isRecord(body.resultSetMetaData) ? body.resultSetMetaData : {};
-  const names = Array.isArray(meta.rowType)
-    ? meta.rowType.map((c) => (isRecord(c) && typeof c.name === 'string' ? c.name.toLowerCase() : ''))
-    : [];
-  const data = Array.isArray(body.data) ? body.data : [];
-  return data.map((raw) => {
+function invalidResult(): never {
+  throw new HttpError(502, 'snowflake_response', 'Snowflake returned an invalid result.');
+}
+
+function columnNames(body: Record<string, unknown>): string[] {
+  const meta = body.resultSetMetaData;
+  if (!isRecord(meta) || !Array.isArray(meta.rowType)) return invalidResult();
+  return meta.rowType.map((column) => {
+    if (!isRecord(column) || typeof column.name !== 'string' || !column.name) return invalidResult();
+    return column.name.toLowerCase();
+  });
+}
+
+function rowsFrom(body: Record<string, unknown>, names: string[]): Row[] {
+  if (!Array.isArray(body.data)) return invalidResult();
+  return body.data.map((raw) => {
+    if (!Array.isArray(raw) || raw.length !== names.length) return invalidResult();
     const row: Row = {};
-    if (Array.isArray(raw)) names.forEach((name, i) => { row[name] = raw[i] == null ? null : String(raw[i]); });
+    names.forEach((name, i) => {
+      const value: unknown = raw[i];
+      if (value != null && typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
+        return invalidResult();
+      }
+      row[name] = value == null ? null : String(value);
+    });
     return row;
   });
+}
+
+function queryError(status: number, result: Record<string, unknown>, initialSubmission = false): never {
+  const Failure = initialSubmission && [401, 403, 422, 429].includes(status) ? SnowflakeRejectedError : HttpError;
+  // Provider messages can contain SQL and memory contents. Log only diagnostic identifiers.
+  console.error(`Snowflake HTTP ${status}; code ${String(result.code ?? '').slice(0, 30)}`);
+  if (status === 401 || status === 403) {
+    throw new Failure(502, 'snowflake_auth', 'Snowflake rejected the token (check the PAT and network policy).');
+  }
+  if (status === 408 || status === 504) {
+    throw new HttpError(504, 'snowflake_timeout', 'Snowflake took too long.');
+  }
+  if (status === 429) throw new Failure(503, 'snowflake_busy', 'Snowflake is busy. Try again shortly.');
+  if (status >= 500) throw new HttpError(502, 'snowflake_unavailable', 'Snowflake is temporarily unavailable.');
+  throw new Failure(502, 'snowflake_error', 'The Snowflake query failed.');
 }
 
 /**
@@ -61,27 +103,70 @@ export async function sql(env: Env, statement: string, binds: string[] = [], tim
   if (binds.length) body.bindings = bindings;
 
   const deadline = Date.now() + (timeoutSeconds + 5) * 1000;
+  const remaining = () => {
+    const ms = deadline - Date.now();
+    if (ms <= 0) throw new HttpError(504, 'snowflake_timeout', 'Snowflake took too long.');
+    return ms;
+  };
+  const pause = async (ms: number) => {
+    await new Promise((resolve) => setTimeout(resolve, Math.min(ms, remaining())));
+    remaining();
+  };
+  const get = (path: string) => providerFetch(`${accountUrl}${path}`,
+    { method: 'GET', headers: headers(pat) }, remaining(), 'Snowflake');
+
+  // Never blindly retry POST: a lost response may still have committed an INSERT.
   let response = await providerFetch(`${accountUrl}/api/v2/statements`, {
     method: 'POST', headers: headers(pat), body: JSON.stringify(body),
-  }, (timeoutSeconds + 5) * 1000, 'Snowflake');
-
+  }, remaining(), 'Snowflake');
+  let handle: string | undefined;
+  let polling = false;
+  let transientRetries = 0;
+  let pollDelay = 250;
+  let result: Record<string, unknown>;
   while (true) {
     const payload: unknown = await response.json().catch(() => null);
-    const result = isRecord(payload) ? payload : {};
-    if (response.status === 200) return rowsFrom(result);
-    if (response.status === 202 && typeof result.statementHandle === 'string') {
-      if (Date.now() > deadline) throw new HttpError(504, 'snowflake_timeout', 'Snowflake took too long.');
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      response = await providerFetch(`${accountUrl}/api/v2/statements/${encodeURIComponent(result.statementHandle)}`,
-        { method: 'GET', headers: headers(pat) }, 15_000, 'Snowflake');
-      continue;
+    result = isRecord(payload) ? payload : {};
+    if (typeof result.statementHandle === 'string' && result.statementHandle) handle = result.statementHandle;
+    if (response.status === 200) break;
+    if (response.status === 202 && handle) {
+      await pause(pollDelay);
+      pollDelay = Math.min(pollDelay * 2, 1500);
+      polling = true;
+    } else if (polling && handle && [429, 502, 503].includes(response.status) && transientRetries < 3) {
+      transientRetries += 1;
+      await pause(250 * 2 ** transientRetries);
+    } else {
+      if (response.status === 202) return invalidResult();
+      queryError(response.status, result, !polling);
     }
-    console.error(`Snowflake ${response.status}: ${String(result.message ?? '').slice(0, 300)} (code ${String(result.code ?? '')})`);
-    if (response.status === 401 || response.status === 403) {
-      throw new HttpError(502, 'snowflake_auth', 'Snowflake rejected the token (check the PAT and network policy).');
-    }
-    throw new HttpError(502, 'snowflake_error', 'The Snowflake query failed.');
+    // Build the path ourselves; never forward a PAT to a provider-supplied URL.
+    response = await get(`/api/v2/statements/${encodeURIComponent(handle!)}`);
   }
+  const names = columnNames(result);
+  const rows = rowsFrom(result, names);
+  const meta = result.resultSetMetaData as Record<string, unknown>;
+  const partitions = Array.isArray(meta.partitionInfo) ? meta.partitionInfo : [];
+  if (partitions.length > 1 && !handle) return invalidResult();
+  for (let partition = 1; partition < partitions.length; partition += 1) {
+    const path = `/api/v2/statements/${encodeURIComponent(handle!)}?partition=${partition}`;
+    let partitionResult: Record<string, unknown>;
+    for (let attempt = 0; ; attempt += 1) {
+      const next = await get(path);
+      const payload: unknown = await next.json().catch(() => null);
+      partitionResult = isRecord(payload) ? payload : {};
+      if (next.status === 200) break;
+      if ([202, 429, 502, 503].includes(next.status) && attempt < 3) {
+        await pause(250 * 2 ** attempt);
+        continue;
+      }
+      queryError(next.status, partitionResult);
+    }
+    // Later partitions may omit metadata: retain the first partition's columns.
+    rows.push(...rowsFrom(partitionResult, names));
+  }
+  if (typeof meta.numRows === 'number' && rows.length !== meta.numRows) return invalidResult();
+  return rows;
 }
 
 // ---------- MEMORIES ----------
@@ -100,19 +185,21 @@ export function rowToMemory(row: Row): StoredMemory {
   const lat = row.lat == null ? NaN : Number(row.lat);
   const lng = row.lng == null ? NaN : Number(row.lng);
   const objects = parseJson<unknown>(row.objects, []);
-  const selection = parseJson<Selection | null>(row.selection, null);
+  const selection = parseSelection(parseJson<unknown>(row.selection, null));
+  const timestamp = row.created_at ? new Date(row.created_at) : null;
+  if (!timestamp || !Number.isFinite(timestamp.getTime())) return invalidResult();
   return {
     id: row.id ?? '',
-    createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+    createdAt: timestamp.toISOString(),
     kind: row.kind === 'passive' ? 'passive' : 'explicit',
     title: row.title ?? '',
     summary: row.summary ?? '',
     visibleText: row.visible_text ?? '',
-    objects: Array.isArray(objects) ? objects.map(String) : [],
+    objects: Array.isArray(objects) ? objects.filter((value): value is string => typeof value === 'string') : [],
     note: row.note || null,
     imageKey: row.image_key ?? '',
-    selection: selection && typeof selection === 'object' && 'mode' in selection ? selection : { mode: 'full', box: null },
-    location: Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null,
+    selection,
+    location: validCoordinates(lat, lng) ? { lat, lng } : null,
     place: parseJson<Place | null>(row.place, null),
     productQuery: row.product_query || null,
   };
@@ -175,40 +262,66 @@ export async function searchMemories(env: Env, question: string): Promise<Array<
 
 // ---------- OVERTURE PLACES ----------
 
-/** OVERTURE_PLACES_TABLE is interpolated into SQL, so only allow identifier characters. */
+/** Validate each component because OVERTURE_PLACES_TABLE is interpolated into SQL. */
 export function placesTable(env: Env): string {
   const table = env.OVERTURE_PLACES_TABLE?.trim() || 'OVERTURE_MAPS__PLACES.CARTO.PLACE';
-  if (!/^[A-Za-z0-9_$."]+$/.test(table)) {
+  // One to three unquoted or properly quoted identifiers; dots inside quotes are legal.
+  const identifier = '(?:[A-Za-z_][A-Za-z0-9_$]*|"(?:[^"\\x00-\\x1f]|"")+")';
+  if (!new RegExp(`^${identifier}(?:\\.${identifier}){0,2}$`).test(table)) {
     throw new HttpError(503, 'not_configured', 'OVERTURE_PLACES_TABLE is not a valid table name.');
   }
   return table;
 }
 
-// Column shapes follow the CARTO Overture listing (VARIANT columns with Parquet-style list wrappers).
-// Verify with CoCo: see snowflake/02_overture_explore.sql.
-const PLACE_COLUMNS = `ID AS id,
+type CategoryColumn = 'TAXONOMY' | 'CATEGORIES';
+const placeSchemaCache = new Map<string, { expires: number; column: CategoryColumn }>();
+
+/** Overture moved categories to taxonomy; discover the installed release instead of guessing. */
+async function categoryColumn(env: Env, table: string): Promise<CategoryColumn> {
+  const key = JSON.stringify([env.SNOWFLAKE_ACCOUNT_URL, env.SNOWFLAKE_DATABASE, env.SNOWFLAKE_SCHEMA, env.SNOWFLAKE_ROLE, table]);
+  const cached = placeSchemaCache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.column;
+  const rows = await sql(env, `DESCRIBE TABLE ${table}`);
+  const columns = new Map(rows.map((row) => [(row.name ?? '').toUpperCase(), (row.type ?? '').toUpperCase()]));
+  const column = columns.has('TAXONOMY') ? 'TAXONOMY' : columns.has('CATEGORIES') ? 'CATEGORIES' : null;
+  if (!column || !['ID', 'NAMES', 'PHONES', 'ADDRESSES', 'GEOMETRY'].every((name) => columns.has(name))) {
+    throw new HttpError(503, 'overture_schema', 'The Overture table schema needs verification. See snowflake/02_overture_explore.sql.');
+  }
+  // Planar GEOMETRY distances are degrees, not meters; require an explicitly normalized view.
+  if (columns.get('GEOMETRY') !== 'GEOGRAPHY') {
+    throw new HttpError(503, 'overture_schema', 'Overture GEOMETRY must be GEOGRAPHY. Configure a normalized view for meter distances.');
+  }
+  if (placeSchemaCache.size >= 32) placeSchemaCache.clear();
+  placeSchemaCache.set(key, { column, expires: Date.now() + 5 * 60_000 });
+  return column;
+}
+
+// Legacy Parquet list wrappers and newer native arrays both appear in Overture releases.
+function placeColumns(category: CategoryColumn): string {
+  return `ID AS id,
   NAMES:primary::STRING AS name,
-  CATEGORIES:primary::STRING AS category,
-  PHONES:list[0]:element::STRING AS phone,
-  ADDRESSES:list[0]:element:freeform::STRING AS street,
-  ADDRESSES:list[0]:element:locality::STRING AS locality,
-  ADDRESSES:list[0]:element:region::STRING AS region,
+  ${category}:primary::STRING AS category,
+  COALESCE(PHONES:list[0]:element::STRING, PHONES[0]::STRING) AS phone,
+  COALESCE(ADDRESSES:list[0]:element:freeform::STRING, ADDRESSES[0]:freeform::STRING) AS street,
+  COALESCE(ADDRESSES:list[0]:element:locality::STRING, ADDRESSES[0]:locality::STRING) AS locality,
+  COALESCE(ADDRESSES:list[0]:element:region::STRING, ADDRESSES[0]:region::STRING) AS region,
   ST_Y(GEOMETRY) AS lat,
   ST_X(GEOMETRY) AS lng`;
+}
 
-export function nearbySql(table: string): string {
-  return `SELECT ${PLACE_COLUMNS},
+export function nearbySql(table: string, category: CategoryColumn = 'TAXONOMY'): string {
+  return `SELECT ${placeColumns(category)},
   ST_DISTANCE(GEOMETRY, ST_MAKEPOINT(?::FLOAT, ?::FLOAT)) AS meters
 FROM ${table}
 WHERE ST_DWITHIN(GEOMETRY, ST_MAKEPOINT(?::FLOAT, ?::FLOAT), ?::FLOAT)
-  AND (ARRAY_CONTAINS(CATEGORIES:primary, PARSE_JSON(?)::ARRAY)
+  AND (ARRAY_CONTAINS(${category}:primary, PARSE_JSON(?)::ARRAY)
        OR REGEXP_LIKE(NAMES:primary::STRING, ?, 'i'))
-ORDER BY meters
+ORDER BY meters, id
 LIMIT 5`;
 }
 
-export function businessMatchSql(table: string): string {
-  return `SELECT ${PLACE_COLUMNS},
+export function businessMatchSql(table: string, category: CategoryColumn = 'TAXONOMY'): string {
+  return `SELECT ${placeColumns(category)},
   ST_DISTANCE(GEOMETRY, ST_MAKEPOINT(?::FLOAT, ?::FLOAT)) AS meters,
   JAROWINKLER_SIMILARITY(LOWER(NAMES:primary::STRING), LOWER(?)) AS similarity
 FROM ${table}
@@ -218,7 +331,14 @@ ORDER BY similarity DESC, meters
 LIMIT 1`;
 }
 
-function rowToPlace(row: Row): Place {
+function validCoordinates(lat: number, lng: number): boolean {
+  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+}
+
+function rowToPlace(row: Row): Place | null {
+  const lat = row.lat == null || row.lat.trim() === '' ? NaN : Number(row.lat);
+  const lng = row.lng == null || row.lng.trim() === '' ? NaN : Number(row.lng);
+  if (!validCoordinates(lat, lng) || !row.id) return null;
   const address = [row.street, row.locality, row.region].filter(Boolean).join(', ');
   const meters = row.meters == null ? NaN : Number(row.meters);
   return {
@@ -227,9 +347,9 @@ function rowToPlace(row: Row): Place {
     category: row.category ?? 'place',
     address: address || null,
     phone: row.phone || null,
-    lat: Number(row.lat ?? 0),
-    lng: Number(row.lng ?? 0),
-    distanceMeters: Number.isFinite(meters) ? Math.round(meters) : null,
+    lat,
+    lng,
+    distanceMeters: Number.isFinite(meters) && meters >= 0 ? Math.round(meters) : null,
   };
 }
 
@@ -241,16 +361,20 @@ export async function nearbyPlaces(env: Env, location: Location, categories: str
   radiusMeters = NEARBY_RADIUS_METERS): Promise<Place[]> {
   const words = keywords.map((k) => k.trim()).filter((k) => k.length >= 3).slice(0, 5);
   // An impossible pattern when there are no keywords, so only categories match.
-  const pattern = words.length ? `.*(${words.map(escapeRegex).join('|')}).*` : '^\\b$';
+  const pattern = words.length ? `.*(${words.map(escapeRegex).join('|')}).*` : 'a^';
   const lng = String(location.lng), lat = String(location.lat);
-  const rows = await sql(env, nearbySql(placesTable(env)),
+  const table = placesTable(env);
+  const category = await categoryColumn(env, table);
+  const rows = await sql(env, nearbySql(table, category),
     [lng, lat, lng, lat, String(radiusMeters), JSON.stringify(categories.slice(0, 6)), pattern], 45);
-  return rows.map(rowToPlace);
+  return rows.map(rowToPlace).filter((place): place is Place => place !== null);
 }
 
 export async function matchBusiness(env: Env, location: Location, name: string): Promise<Place | null> {
   const lng = String(location.lng), lat = String(location.lat);
-  const rows = await sql(env, businessMatchSql(placesTable(env)),
+  const table = placesTable(env);
+  const category = await categoryColumn(env, table);
+  const rows = await sql(env, businessMatchSql(table, category),
     [lng, lat, name, lng, lat, String(BUSINESS_MATCH_RADIUS_METERS), name], 20);
   return rows[0] ? rowToPlace(rows[0]) : null;
 }
