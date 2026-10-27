@@ -68,7 +68,7 @@ The deploy prints `https://wink-api.<subdomain>.workers.dev`; share it in AGENTS
 4. `"MOCK": "false"` in `wrangler.jsonc`, then use `npm run dev:real` locally / redeploy. This is Arboy’s account setup step; the default `npm run dev` stays a local MOCK workflow.
 5. Optional: `DEMO_LAT` / `DEMO_LNG` as the fallback location when the phone sends none.
 
-`GET /v1/health` shows `mock` and the active models. Provider errors are logged with `console.error` (`npx wrangler tail` when deployed).
+`GET /v1/health` shows `mock` and the active models. Provider errors are logged with `console.error`. When deployed, they persist in Workers Logs (dashboard → Workers → `wink-api` → Logs) as well as `npx wrangler tail`. Invocation (per-request) logs are off and query strings are redacted, because `/v1/live` carries the token in `?token=`. Keep memory contents and tokens out of every log line.
 
 ## Notes
 
