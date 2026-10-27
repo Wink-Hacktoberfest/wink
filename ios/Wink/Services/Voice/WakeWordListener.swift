@@ -50,6 +50,7 @@ final class WakeWordListener {
     @ObservationIgnored private var followUpUntil: Date?
     @ObservationIgnored private var levelTimer: Timer?
     @ObservationIgnored private var configObserver: NSObjectProtocol?
+    @ObservationIgnored private var inputRetries = 0
 
     /// Download + load the Whisper model. Safe to call repeatedly.
     func preloadModel() {
@@ -94,8 +95,19 @@ final class WakeWordListener {
         }
         guard format.sampleRate > 0, format.channelCount > 0 else {
             micError = "No microphone input available"
+            // Right after a route switch (e.g. glasses camera starting) the new input isn't ready yet; retry briefly.
+            if inputRetries < 10 {
+                inputRetries += 1
+                Task { [weak self] in
+                    try? await Task.sleep(for: .milliseconds(500))
+                    guard let self, !self.isListening else { return }
+                    self.engine.reset()
+                    self.start()
+                }
+            }
             return
         }
+        inputRetries = 0
         let segmenter = self.segmenter
         input.removeTap(onBus: 0)
         input.installTap(onBus: 0, bufferSize: 4096, format: format) { buffer, _ in

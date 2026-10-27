@@ -167,6 +167,9 @@ final class WinkController {
         } catch {
             cameraError = error.localizedDescription
         }
+        // The route settles only once the camera is up; grab the mic again on the final route.
+        AudioSessionManager.preferBluetoothInput()
+        listener.restart()
         let stream = source.frames()
         frameTask = Task { [weak self] in
             for await frame in stream {
