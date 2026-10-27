@@ -100,8 +100,32 @@ final class GlassesFrameSource: FrameSource {
         let session = try wearables.createSession(deviceSelector: AutoDeviceSelector(wearables: wearables))
         self.session = session
         try session.start()
-        for await state in session.stateStream() {
-            if state == .started { break }
+        // The session may already be started before we subscribe, or pause/stop if the glasses are folded,
+        // so check the current state and give up after a bounded wait instead of hanging on "Starting session…".
+        if session.state != .started {
+            statusText = "Waiting for glasses session…"
+            let started = await withTaskGroup(of: Bool.self) { group in
+                group.addTask {
+                    for await state in session.stateStream() {
+                        if state == .started { return true }
+                        if state == .stopped { return false }
+                    }
+                    return false
+                }
+                group.addTask {
+                    try? await Task.sleep(for: .seconds(12))
+                    return false
+                }
+                let result = await group.next() ?? false
+                group.cancelAll()
+                return result
+            }
+            guard started || session.state == .started else {
+                statusText = "Session \(session.state)"
+                session.stop()
+                self.session = nil
+                throw GlassesError.sessionNotStarted
+            }
         }
 
         // Low resolution + modest frame rate = better per-frame quality over Bluetooth.
@@ -160,12 +184,13 @@ final class GlassesFrameSource: FrameSource {
     }
 
     enum GlassesError: LocalizedError {
-        case notConfigured, permissionDenied, cameraUnavailable
+        case notConfigured, permissionDenied, cameraUnavailable, sessionNotStarted
         var errorDescription: String? {
             switch self {
             case .notConfigured: "Wearables SDK failed to configure."
             case .permissionDenied: "Glasses camera permission was denied in Meta AI."
             case .cameraUnavailable: "Couldn't attach to the glasses camera."
+            case .sessionNotStarted: "The glasses didn't start a session. Wear them with the arms open, then tap Connect again."
             }
         }
     }

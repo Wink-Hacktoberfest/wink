@@ -84,8 +84,9 @@ struct ContentView: View {
     private var header: some View {
         HStack(spacing: 10) {
             HStack(spacing: 10) {
-                Image(systemName: "eye").font(.system(size: 21, weight: .light))
-                    .frame(width: 38, height: 38).background(.white, in: Circle())
+                Image("WinkLogo").resizable().scaledToFill()
+                    .frame(width: 38, height: 38).clipShape(Circle())
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Welcome to Wink").font(.custom("Manrope-ExtraLight", size: 15, relativeTo: .subheadline).weight(.medium))
                     Text("Your world, remembered.").font(.custom("Manrope-ExtraLight", size: 12, relativeTo: .caption).weight(.regular)).foregroundStyle(WinkStyle.muted)
