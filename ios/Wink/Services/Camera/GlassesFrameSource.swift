@@ -1,4 +1,5 @@
 import CoreImage
+import CoreMedia
 import Foundation
 import MWDATCamera
 import MWDATCore
@@ -19,6 +20,7 @@ final class GlassesFrameSource: FrameSource {
     private(set) var deviceCount = 0
     private(set) var isRunning = false
     private(set) var statusText = "Not connected"
+    private(set) var frameCount = 0
     private(set) var lastError: String?
     private(set) var isMock = false
 
@@ -138,10 +140,12 @@ final class GlassesFrameSource: FrameSource {
         let stream = camera.stream
         let broadcaster = self.broadcaster
 
-        stream.videoFramePublisher.listen { frame in
-            // Runs on the SDK's queue. TODO(glasses): verify orientation of real frames.
-            guard let image = frame.makeUIImage(), let cg = image.cgImage ?? GlassesFrameSource.cgImage(from: image) else { return }
+        frameCount = 0
+        stream.videoFramePublisher.listen { [weak self] frame in
+            // Runs on the SDK's queue. Glasses frames are pixel-buffer backed, so UIImage.cgImage is nil; convert directly.
+            guard let cg = GlassesFrameSource.cgImage(from: frame) else { return }
             broadcaster.publish(Frame(image: cg))
+            Task { @MainActor in self?.countFrame() }
         }.store(in: tokens)
 
         stream.statePublisher.listen { [weak self] state in
@@ -178,9 +182,22 @@ final class GlassesFrameSource: FrameSource {
         broadcaster.clear()
     }
 
-    nonisolated private static func cgImage(from image: UIImage) -> CGImage? {
-        guard let ci = image.ciImage else { return nil }
-        return CIContext().createCGImage(ci, from: ci.extent)
+    private func countFrame() {
+        frameCount += 1
+        if frameCount == 1 || frameCount % 30 == 0 { statusText = "Streaming · \(frameCount) frames" }
+    }
+
+    nonisolated(unsafe) private static let ciContext = CIContext()
+
+    nonisolated private static func cgImage(from frame: VideoFrame) -> CGImage? {
+        if let pixels = CMSampleBufferGetImageBuffer(frame.sampleBuffer) {
+            let ci = CIImage(cvPixelBuffer: pixels)
+            if let cg = ciContext.createCGImage(ci, from: ci.extent) { return cg }
+        }
+        guard let image = frame.makeUIImage() else { return nil }
+        if let cg = image.cgImage { return cg }
+        if let ci = image.ciImage { return ciContext.createCGImage(ci, from: ci.extent) }
+        return UIGraphicsImageRenderer(size: image.size).image { _ in image.draw(at: .zero) }.cgImage
     }
 
     enum GlassesError: LocalizedError {
