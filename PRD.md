@@ -33,7 +33,7 @@ Wink is an iOS app paired with Meta Ray-Ban glasses:
 | Best Open-Source AI (main) | Open-source/open-weight AI is central; public GitHub repo with an OSS license | gpt-oss-120b (reasoning), open vision model, Whisper via WhisperKit (wake word + speech), MediaPipe Hands (gestures), Arctic Embed (memory vectors). MIT license. |
 | Best Open-Source AI with Snowflake | CoCo + a free Snowflake dataset + open AI | Free dataset: **Overture Maps Places** (CARTO, Snowflake Marketplace). CoCo explores its nested schema, writes the nearby query, and designs the memory table and vector search. Screenshots go in `docs/coco/`. |
 | Best Open-Source AI (sponsored by DigitalOcean) | Open-weight AI is important to how it works | gpt-oss-120b (answers) and Mistral Small 3.1 (vision) on Cloudflare Workers AI, plus Whisper and MediaPipe on device. DigitalOcean inference needs a card on file, so `CHAT_PROVIDER`/`VISION_PROVIDER` can switch back to DigitalOcean with one setting if a key becomes available. |
-| Best Use of Snowflake | AI features in a data application | A RAG memory assistant: memories stored as `VECTOR(FLOAT,1024)` with Cortex `EMBED_TEXT_1024`, searched with `VECTOR_COSINE_SIMILARITY`, and grounded in Overture Places. |
+| Best Use of Snowflake | AI features in a data application | A RAG memory assistant: memories stored as `VECTOR(FLOAT,1024)` with Cortex `AI_EMBED`, searched with `VECTOR_COSINE_SIMILARITY`, and grounded in Overture Places. |
 
 **Demo must say out loud:** the dataset name (Overture Maps Places by CARTO), how CoCo helped (show the screenshots), and which models are open (gpt-oss, Whisper, MediaPipe, Arctic Embed).
 

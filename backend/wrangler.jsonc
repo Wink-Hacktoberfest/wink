@@ -27,7 +27,7 @@
   // and is the vision fallback otherwise.
   "ai": { "binding": "AI" },
   "vars": {
-    "MOCK": "true",
+    "MOCK": "false",
     "CHAT_PROVIDER": "workers-ai",
     "CHAT_MODEL": "openai-gpt-oss-120b",
     "WORKERS_AI_CHAT_MODEL": "@cf/openai/gpt-oss-120b",
@@ -35,12 +35,12 @@
     "VISION_MODEL": "",
     "WORKERS_AI_VISION_MODEL": "@cf/mistralai/mistral-small-3.1-24b-instruct",
     "EMBED_MODEL": "snowflake-arctic-embed-l-v2.0",
-    "SNOWFLAKE_ACCOUNT_URL": "",
+    "SNOWFLAKE_ACCOUNT_URL": "https://lfuzpkj-cj15352.snowflakecomputing.com",
     "SNOWFLAKE_WAREHOUSE": "WINK_WH",
     "SNOWFLAKE_DATABASE": "WINK",
     "SNOWFLAKE_SCHEMA": "APP",
     "SNOWFLAKE_ROLE": "",
-    "OVERTURE_PLACES_TABLE": "OVERTURE_MAPS__PLACES.CARTO.PLACE",
+    "OVERTURE_PLACES_TABLE": "OVERTURE_MAPS_PLACES.CARTO.PLACE",
     "DEMO_LAT": "",
     "DEMO_LNG": ""
   }

@@ -205,26 +205,29 @@ export function rowToMemory(row: Row): StoredMemory {
   };
 }
 
+/** AI_EMBED needs the model as a string literal (bindings are rejected), so only plain model ids are allowed. */
 function embedModel(env: Env): string {
-  return env.EMBED_MODEL?.trim() || 'snowflake-arctic-embed-l-v2.0';
+  const model = env.EMBED_MODEL?.trim() || 'snowflake-arctic-embed-l-v2.0';
+  if (!/^[a-z0-9][a-z0-9._-]{0,80}$/i.test(model)) throw new HttpError(503, 'not_configured', 'EMBED_MODEL is not a valid model id.');
+  return model;
 }
 
 export function embeddingText(m: Pick<StoredMemory, 'title' | 'summary' | 'visibleText' | 'objects' | 'note'>): string {
   return [m.title, m.summary, m.visibleText, m.objects.join(', '), m.note ?? ''].filter(Boolean).join('. ').slice(0, 4000);
 }
 
-export const INSERT_MEMORY_SQL = `INSERT INTO MEMORIES
+export const insertMemorySql = (model: string) => `INSERT INTO MEMORIES
   (id, created_at, kind, title, summary, visible_text, objects, note, image_key, selection, lat, lng, place, product_query, embedding)
 SELECT ?, TO_TIMESTAMP_TZ(?), ?, ?, ?, ?, PARSE_JSON(?), NULLIF(?, ''), ?, PARSE_JSON(?),
   TRY_TO_DOUBLE(NULLIF(?, '')), TRY_TO_DOUBLE(NULLIF(?, '')), PARSE_JSON(NULLIF(?, '')), NULLIF(?, ''),
-  SNOWFLAKE.CORTEX.EMBED_TEXT_1024(?, ?)`;
+  AI_EMBED('${model}', ?)`;
 
 export async function insertMemory(env: Env, m: StoredMemory): Promise<void> {
-  await sql(env, INSERT_MEMORY_SQL, [
+  await sql(env, insertMemorySql(embedModel(env)), [
     m.id, m.createdAt, m.kind, m.title, m.summary, m.visibleText, JSON.stringify(m.objects), m.note ?? '',
     m.imageKey, JSON.stringify(m.selection), m.location ? String(m.location.lat) : '',
     m.location ? String(m.location.lng) : '', m.place ? JSON.stringify(m.place) : '', m.productQuery ?? '',
-    embedModel(env), embeddingText(m),
+    embeddingText(m),
   ]);
 }
 
@@ -245,8 +248,8 @@ export async function deleteMemory(env: Env, id: string): Promise<string | null>
   return rows[0]?.image_key ?? null;
 }
 
-export const SEARCH_MEMORIES_SQL = `SELECT ${MEMORY_COLUMNS},
-  VECTOR_COSINE_SIMILARITY(embedding, SNOWFLAKE.CORTEX.EMBED_TEXT_1024(?, ?)) AS score
+export const searchMemoriesSql = (model: string) => `SELECT ${MEMORY_COLUMNS},
+  VECTOR_COSINE_SIMILARITY(embedding, AI_EMBED('${model}', ?)) AS score
 FROM MEMORIES
 WHERE embedding IS NOT NULL
 ORDER BY score DESC
@@ -254,7 +257,7 @@ LIMIT 3`;
 
 /** Top-3 vector search, weak matches dropped. Best match first. */
 export async function searchMemories(env: Env, question: string): Promise<Array<StoredMemory & { score: number }>> {
-  const rows = await sql(env, SEARCH_MEMORIES_SQL, [embedModel(env), question.slice(0, 2000)]);
+  const rows = await sql(env, searchMemoriesSql(embedModel(env)), [question.slice(0, 2000)]);
   const scored = rows.map((row) => ({ ...rowToMemory(row), score: Number(row.score ?? 0) }));
   const best = scored[0]?.score ?? 0;
   return scored.filter((m) => m.score >= ASK_MIN_SCORE && m.score >= best - ASK_RELATIVE_GAP);
@@ -264,7 +267,7 @@ export async function searchMemories(env: Env, question: string): Promise<Array<
 
 /** Validate each component because OVERTURE_PLACES_TABLE is interpolated into SQL. */
 export function placesTable(env: Env): string {
-  const table = env.OVERTURE_PLACES_TABLE?.trim() || 'OVERTURE_MAPS__PLACES.CARTO.PLACE';
+  const table = env.OVERTURE_PLACES_TABLE?.trim() || 'OVERTURE_MAPS_PLACES.CARTO.PLACE';
   // One to three unquoted or properly quoted identifiers; dots inside quotes are legal.
   const identifier = '(?:[A-Za-z_][A-Za-z0-9_$]*|"(?:[^"\\x00-\\x1f]|"")+")';
   if (!new RegExp(`^${identifier}(?:\\.${identifier}){0,2}$`).test(table)) {

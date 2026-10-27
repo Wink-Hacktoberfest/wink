@@ -224,7 +224,7 @@ test('real routes: vision → R2 → embedded SQL insert → search/answer → d
   const { memory } = await saved.json() as { memory: { id: string; title: string; imageKey?: string } };
   assert.equal(memory.title, 'Project Hail Mary');
   assert.equal(memory.imageKey, undefined);
-  assert.match(insertStatement, /EMBED_TEXT_1024/);
+  assert.match(insertStatement, /AI_EMBED/);
   assert.equal(images.size, 1);
   const answer = await call(env, 'POST', '/v1/ask', { question: 'what was that book?' });
   assert.equal(answer.status, 200);

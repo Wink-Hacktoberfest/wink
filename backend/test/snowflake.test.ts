@@ -108,8 +108,15 @@ test('insert binds nullable JSON, timestamp and embedding input', async (t) => {
   assert.equal(body.bindings['2']!.value, memory.createdAt);
   assert.equal(body.bindings['7']!.value, '["book"]');
   for (const key of ['8', '11', '13']) assert.equal(body.bindings[key]!.value, '');
-  assert.equal(body.bindings['15']!.value, 'snowflake-arctic-embed-l-v2.0');
-  assert.match(body.bindings['16']!.value, /COSMOS/);
+  // AI_EMBED rejects a bound model, so the validated model id is a literal and the text is the 15th binding.
+  assert.match(body.statement, /AI_EMBED\('snowflake-arctic-embed-l-v2\.0', \?\)/);
+  assert.equal(body.bindings['16'], undefined);
+  assert.match(body.bindings['15']!.value, /COSMOS/);
+});
+
+test('embedding model ids that could break out of the SQL literal are rejected', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () => { throw new Error('must not query'); });
+  await assert.rejects(insertMemory({ ...env, EMBED_MODEL: "x', 'y" } as Env, memory), (error: unknown) => error instanceof HttpError && error.code === 'not_configured');
 });
 
 test('search drops weak and relatively distant matches while preserving order', async (t) => {

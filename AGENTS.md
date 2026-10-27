@@ -39,7 +39,7 @@ wink/
 - **On-device AI (iOS):** WhisperKit (`argmaxinc/argmax-oss-swift`, exact 1.1.1, Whisper `base.en`) for the "Hey Wink" wake word and commands; MediaPipe Hand Landmarker (CocoaPods `MediaPipeTasksVision`, model `hand_landmarker.task`) for gestures; AVSpeechSynthesizer for replies.
 - **Backend:** Cloudflare Workers + Durable Objects (WebSocket Hibernation API) + R2 + static assets.
 - **Inference:** Cloudflare Workers AI through the `AI` binding (no key needed): `@cf/openai/gpt-oss-120b` for answers and speech (`CHAT_PROVIDER=workers-ai`), `@cf/mistralai/mistral-small-3.1-24b-instruct` for images (`VISION_PROVIDER=workers-ai`). Both are verified live on Arboy's account and return OpenAI `chat.completion` objects; gpt-oss keeps its reasoning in a separate field. DigitalOcean Gradient (`https://inference.do-ai.run/v1`) remains supported by setting both providers to `digitalocean` + `DO_MODEL_ACCESS_KEY`, but DigitalOcean requires a card on file, so it is off. Fallback vision: Workers AI `@cf/meta/llama-3.2-11b-vision-instruct`.
-- **Data:** Snowflake SQL API v2 with a programmatic access token. `WINK.APP.MEMORIES` holds memories with `VECTOR(FLOAT,1024)` from `SNOWFLAKE.CORTEX.EMBED_TEXT_1024('snowflake-arctic-embed-l-v2.0', …)`, searched with `VECTOR_COSINE_SIMILARITY`. The free dataset is **Overture Maps Places** (CARTO listing on the Snowflake Marketplace), table configured by `OVERTURE_PLACES_TABLE`.
+- **Data:** Snowflake SQL API v2 with a programmatic access token. `WINK.APP.MEMORIES` holds memories with `VECTOR(FLOAT,1024)` from `AI_EMBED('snowflake-arctic-embed-l-v2.0', …)`, searched with `VECTOR_COSINE_SIMILARITY`. The free dataset is **Overture Maps Places** (CARTO listing on the Snowflake Marketplace), table configured by `OVERTURE_PLACES_TABLE`.
 
 ## Running things
 
@@ -109,20 +109,26 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 | A4 speech into glasses | Arboy | 🟡 | HFP routing untested on device |
 | A5 gestures + selection crop | Arboy | 🟡 | thresholds tuned on synthetic hands only; tune on real footage |
 | A6 live socket events / pointer | Arboy | ✅ | socket connects; flick only sends the event, TV decides what to delete |
-| A8 keys (Snowflake PAT, R2, token) | Arboy | 🟡 | R2 bucket + WINK_TOKEN done; Workers AI replaces DO; Snowflake pending |
+| A8 keys (Snowflake PAT, R2, token) | Arboy | ✅ | R2, WINK_TOKEN, Snowflake setup + PAT (WINK_SVC, 7-day) done |
 | M1 provider reliability | Messi | ✅ | bounded calls, final-only chat, Workers AI fallback; tested with stubbed providers |
 | M2 `/memories` real | Messi | ✅ | code + real-route transport tests; R2 cleanup and retryable deletion; live account check pending |
 | M3 `/ask` real | Messi | ✅ | vector retrieval + grounded chat/fallback; live provider check pending |
 | M4 LiveRoom relay | Messi | ✅ | validated events, rate caps, concurrent MOCK storage; local real-WebSocket smoke passes |
 | M5 TV dashboard | Messi | ✅ | Chrome verified; privacy pause, reconnect/resync, pointer, accessible memory details |
 | M6 `/nearby` on Overture | Messi | ✅ | code detects taxonomy/categories and validates geography; actual share/category check pending |
-| M7 deploy + MOCK off | Arboy | ⬜ | after M1 |
+| M7 deploy + MOCK off | Arboy | ✅ | https://wink-api.arboydev.workers.dev, real save/ask/nearby/delete verified |
 | M8 CoCo screenshots | Messi | ⬜ | checklist and 04_verify.sql ready; actual Arboy account session/evidence required |
 | Demo video + Devpost | Both | ⬜ | |
 
 ## Handoffs
 
 Newest first. Format: `HH:MM from → to: message`.
+
+- 20:10 Arboy → Messi: **deployed and live** at `https://wink-api.arboydev.workers.dev` with `MOCK=false` (TV at `/tv?token=…`). Snowflake fixes you should know about:
+  - The listing database is `OVERTURE_MAPS_PLACES` (one underscore); table `OVERTURE_MAPS_PLACES.CARTO.PLACE`, 81M rows.
+  - New accounts can't call `SNOWFLAKE.CORTEX.EMBED_TEXT_1024`; everything now uses `AI_EMBED` (same Arctic Embed model, `VECTOR(FLOAT,1024)`).
+  - `AI_EMBED` rejects a bound model argument, so `insertMemorySql(model)` / `searchMemoriesSql(model)` inline a regex-validated model id; only the text is bound.
+  - Verified for real: save (~8 s), ask (~4 s), nearby (5 real coffee shops, closest 255 m), delete.
 
 - 19:55 Arboy → Messi: DigitalOcean won't issue an inference key without a credit card, so the backend now defaults to Workers AI for both chat and vision (PR `arboy/workers-ai-models`). `CHAT_PROVIDER=workers-ai` runs `@cf/openai/gpt-oss-120b`; `VISION_PROVIDER=workers-ai` runs `@cf/mistralai/mistral-small-3.1-24b-instruct` (Apache-2.0, no license gate) with an `image_url` message. Llama 3.2 Vision still uses its prompt+image schema if selected. 64 tests pass; real `/v1/glance` verified end to end on Arboy's account (~8 s). The DigitalOcean path is untouched and returns with `CHAT_PROVIDER`/`VISION_PROVIDER=digitalocean`.
 

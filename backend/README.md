@@ -76,7 +76,7 @@ The deploy prints `https://wink-api.<subdomain>.workers.dev`; share it in AGENTS
 - Saved image responses use `Cache-Control: no-store`, so a successful forget cannot leave an immutable browser-cached image. R2 deletion must succeed before the row is removed; retrying a failed deletion is safe.
 - Images are cleaned up after a definite rejected INSERT. A transport or polling failure may follow a committed INSERT, so its image is retained for reconciliation rather than breaking a saved memory. No SQL writes are automatically retried.
 - Client WebSocket events are validated; forged `memory.*`/answer events are discarded. Pointer/frame traffic is capped at 20/2 messages per second per socket, including hibernation.
-- Snowflake bindings are all `TEXT`; vectors are computed inline with `SNOWFLAKE.CORTEX.EMBED_TEXT_1024` (see `../snowflake/03_app_queries.sql`).
+- Snowflake bindings are all `TEXT`; vectors are computed inline with `AI_EMBED` (see `../snowflake/03_app_queries.sql`).
 - `/v1/ask` drops matches below cosine 0.30 (tune `ASK_MIN_SCORE` in `src/snowflake.ts` after a few real memories).
 - Debug the TV from the browser console: `wink.handle({ type: 'pointer', x: 0.5, y: 0.5, pinching: true })`.
 
