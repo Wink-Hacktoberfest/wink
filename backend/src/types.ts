@@ -84,7 +84,9 @@ export interface Env {
   AI?: Ai;
   ASSETS?: Fetcher;
   MOCK?: string;
+  CHAT_PROVIDER?: string;
   CHAT_MODEL?: string;
+  WORKERS_AI_CHAT_MODEL?: string;
   VISION_PROVIDER?: string;
   VISION_MODEL?: string;
   WORKERS_AI_VISION_MODEL?: string;

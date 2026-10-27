@@ -23,7 +23,7 @@ A book with a clear cover · a wine bottle or snack with a bold label · a stick
 | 7 | Recall | Presenter asks the judge: "What was the Wi-Fi password?" They won't remember. Judge: "Hey Wink, what's the Wi-Fi password?" | In-ear answer, matching memory highlighted on the TV. Then: "Where did I leave my keys?" → "In the mug, about a minute ago." |
 | 8 | Vision Pro moment | Judge: "Hey Wink, show my memories." Pinch and move. | A cursor glides over the TV wall; pinch opens a memory, a flick deletes it. |
 | 9 | Nearby (if shipped) | "Hey Wink, where can I get this nearby?" | Real places from Overture Maps in Snowflake listed on the TV, closest first, read out in the ear. |
-| 10 | Tech reveal (presenter, 30 s) | Architecture slide or README diagram | "Whisper and MediaPipe on the phone. gpt-oss and a vision model on DigitalOcean. Memories as Arctic Embed vectors in Snowflake. Overture Maps Places for the real world, explored with CoCo. All open models, MIT licensed." |
+| 10 | Tech reveal (presenter, 30 s) | Architecture slide or README diagram | "Whisper and MediaPipe on the phone. gpt-oss-120b and Mistral Small 3.1 on Cloudflare Workers AI. Memories as Arctic Embed vectors in Snowflake. Overture Maps Places for the real world, explored with CoCo. All open models, MIT licensed." |
 
 ## Lines to have ready for judges' questions
 - **Dataset:** Overture Maps Places by CARTO, free on the Snowflake Marketplace. Show the CoCo screenshots in `docs/coco/`.

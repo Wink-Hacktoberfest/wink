@@ -23,14 +23,17 @@
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["LiveRoom"] }
   ],
-  // Fallback vision only (VISION_PROVIDER="workers-ai" or VISION_MODEL empty).
+  // Workers AI runs the open models when CHAT_PROVIDER / VISION_PROVIDER are "workers-ai" (no DigitalOcean card needed),
+  // and is the vision fallback otherwise.
   "ai": { "binding": "AI" },
   "vars": {
     "MOCK": "true",
+    "CHAT_PROVIDER": "workers-ai",
     "CHAT_MODEL": "openai-gpt-oss-120b",
-    "VISION_PROVIDER": "digitalocean",
+    "WORKERS_AI_CHAT_MODEL": "@cf/openai/gpt-oss-120b",
+    "VISION_PROVIDER": "workers-ai",
     "VISION_MODEL": "",
-    "WORKERS_AI_VISION_MODEL": "@cf/meta/llama-3.2-11b-vision-instruct",
+    "WORKERS_AI_VISION_MODEL": "@cf/mistralai/mistral-small-3.1-24b-instruct",
     "EMBED_MODEL": "snowflake-arctic-embed-l-v2.0",
     "SNOWFLAKE_ACCOUNT_URL": "",
     "SNOWFLAKE_WAREHOUSE": "WINK_WH",

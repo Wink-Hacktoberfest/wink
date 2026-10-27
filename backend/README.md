@@ -1,11 +1,11 @@
 # Wink backend (`wink-api`)
 
-Cloudflare Worker for Wink: stores memories (R2 images + Snowflake rows with Arctic Embed vectors), describes images with an open vision model, answers with `gpt-oss-120b` on DigitalOcean, finds nearby places in Overture Maps Places, and drives the TV dashboard over a Durable Object WebSocket room. The API contract is [`../docs/api.md`](../docs/api.md).
+Cloudflare Worker for Wink: stores memories (R2 images + Snowflake rows with Arctic Embed vectors), describes images with an open vision model, answers with `gpt-oss-120b` on Cloudflare Workers AI (DigitalOcean Gradient optional), finds nearby places in Overture Maps Places, and drives the TV dashboard over a Durable Object WebSocket room. The API contract is [`../docs/api.md`](../docs/api.md).
 
 ```
 src/index.ts        router, bearer auth, CORS, JSON errors      src/live.ts       LiveRoom DO (WebSocket Hibernation) + MOCK store
 src/events.ts       validates phone events and normalized coordinates
-src/routes/*.ts     memories, glance, ask, nearby, images/events src/inference.ts  DigitalOcean chat/vision, Workers AI fallback
+src/routes/*.ts     memories, glance, ask, nearby, images/events src/inference.ts  Workers AI or DigitalOcean chat/vision
 src/snowflake.ts    SQL API v2 client + all queries              src/speech.ts     speech sanitizer (≤ 25 words, no markdown/emoji/URLs)
 src/mock.ts         canned memories, places, placeholder art     src/prompts.ts    model prompts
 public/tv/          the big-screen dashboard (/tv)
