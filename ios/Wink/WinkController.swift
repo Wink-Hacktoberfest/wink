@@ -158,6 +158,10 @@ final class WinkController {
         frameTask?.cancel()
         let source = activeSource
         cameraError = nil
+        // Listen on the iPhone mic while the glasses camera streams, so the mic doesn't compete for Bluetooth.
+        AudioSessionManager.useGlassesMic = kind != .glasses
+        AudioSessionManager.preferBluetoothInput()
+        listener.restart()
         do {
             try await source.start()
         } catch {
@@ -447,8 +451,9 @@ final class WinkController {
             await glasses.register()
             return
         }
-        await switchSource(to: .glasses)
-        if sourceKind == .glasses, !glasses.isRunning {
+        if sourceKind != .glasses {
+            await switchSource(to: .glasses)  // already starts the glasses source
+        } else if !glasses.isRunning {
             await startSource(.glasses)
         }
     }
