@@ -9,6 +9,7 @@ CREATE WAREHOUSE IF NOT EXISTS WINK_WH
   AUTO_SUSPEND = 60
   AUTO_RESUME = TRUE
   INITIALLY_SUSPENDED = TRUE;
+USE WAREHOUSE WINK_WH;
 
 -- 2. Storage.
 CREATE DATABASE IF NOT EXISTS WINK;
@@ -35,7 +36,10 @@ CREATE TABLE IF NOT EXISTS MEMORIES (
   embedding     VECTOR(FLOAT, 1024)
 );
 
--- Sanity check that Cortex embeddings work in this region/account (should return 1024).
+-- Safe when upgrading an earlier scaffold table.
+ALTER TABLE MEMORIES ADD COLUMN IF NOT EXISTS product_query STRING;
+
+-- Sanity check that Cortex embeddings work in this region/account (should return zero).
 SELECT VECTOR_L2_DISTANCE(
   SNOWFLAKE.CORTEX.EMBED_TEXT_1024('snowflake-arctic-embed-l-v2.0', 'hello'),
   SNOWFLAKE.CORTEX.EMBED_TEXT_1024('snowflake-arctic-embed-l-v2.0', 'hello')) AS should_be_zero;

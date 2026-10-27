@@ -48,7 +48,7 @@ wink/
 cd backend && npm ci && npm run check && npm run build
 npm run dev -- --ip 0.0.0.0     # phone on the same Wi-Fi uses http://<mac-lan-ip>:8787
 ```
-- `MOCK=true` (default in `wrangler.jsonc`) returns canned data for every route, so iOS and the TV work with no keys.
+- `npm run dev` uses `wrangler.mock.jsonc` with `MOCK=true` and no remote AI binding, so iOS and the TV work with no keys or cloud account. `npm run dev:real` uses `wrangler.jsonc` for Arboy’s provider verification. `npm run smoke` checks a running MOCK server through HTTP + real WebSockets.
 - Secrets live only in ignored `.dev.vars` locally or `wrangler secret put` when deployed: `WINK_TOKEN`, `DO_MODEL_ACCESS_KEY`, `SNOWFLAKE_PAT`. Never commit keys.
 - Workers' `fetch` rejects `redirect: 'error'`; use `redirect: 'manual'` for provider calls.
 - TV: open `/tv?token=<WINK_TOKEN>` on the projector laptop.
@@ -106,18 +106,25 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 | A5 gestures + selection crop | Arboy | ⬜ | |
 | A6 live socket events / pointer | Arboy | ⬜ | |
 | M1 keys (DO, Snowflake PAT, R2, token) | Arboy | ⬜ | accounts are Arboy's |
-| M2 `/memories` real | Messi | ⬜ | |
-| M3 `/ask` real | Messi | ⬜ | |
-| M4 LiveRoom relay | Messi | ⬜ | |
-| M5 TV dashboard | Messi | ⬜ | |
-| M6 `/nearby` on Overture | Messi | ⬜ | |
+| M1 provider reliability | Messi | ✅ | bounded calls, final-only chat, Workers AI fallback; tested with stubbed providers |
+| M2 `/memories` real | Messi | ✅ | code + real-route transport tests; R2 cleanup and retryable deletion; live account check pending |
+| M3 `/ask` real | Messi | ✅ | vector retrieval + grounded chat/fallback; live provider check pending |
+| M4 LiveRoom relay | Messi | ✅ | validated events, rate caps, concurrent MOCK storage; local real-WebSocket smoke passes |
+| M5 TV dashboard | Messi | ✅ | Chrome verified; privacy pause, reconnect/resync, pointer, accessible memory details |
+| M6 `/nearby` on Overture | Messi | ✅ | code detects taxonomy/categories and validates geography; actual share/category check pending |
 | M7 deploy + MOCK off | Arboy | ⬜ | after M1 |
-| M8 CoCo screenshots | Messi | ⬜ | |
+| M8 CoCo screenshots | Messi | ⬜ | checklist and 04_verify.sql ready; actual Arboy account session/evidence required |
 | Demo video + Devpost | Both | ⬜ | |
 
 ## Handoffs
 
 Newest first. Format: `HH:MM from → to: message`.
+
+- 19:13 Messi → Arboy: backend implementation is ready on `messi/backend-complete` locally. Typecheck + 61 tests + dry-run build pass; HTTP/WebSocket smoke confirms save → ask → nearby → delete and TV broadcasts. API contract unchanged; no iOS files edited. `npm run dev` now uses a local-only MOCK config (no Cloudflare account); `npm run smoke` tests the running server (`WINK_BASE_URL` overrides port). Use `npm run dev:real` for accounts configured in `wrangler.jsonc`.
+  - Finish the account checklist below, accept the Workers AI vision model license once in your account if using fallback, then run the real save/glance/ask/nearby/delete checks. The Worker no longer accepts license terms automatically.
+  - Run `snowflake/04_verify.sql` as `WINK_APP`; confirm the actual Overture table has GEOGRAPHY and current TAXONOMY or legacy CATEGORIES. Runtime detects that column and handles native/wrapped arrays; CoCo must confirm real category ids and distances. See `snowflake/README.md` for exact screenshot prompts. M8 is pending actual evidence, not completed by local tests.
+  - Timeouts can follow a committed INSERT; preserve and reconcile that memory/image before retrying. Explicit initial SQL rejections clean up the uploaded image; deletion failures leave the row retryable. Saved images are not browser-cached.
+  - Deploy and turn MOCK off only after provider checks. No deployment, secrets, or cloud resources were changed by Messi.
 
 - 19:05 Arboy → Messi: backend scaffold is on `main` and passes `npm run check` (18 tests) + `npm run build`. MOCK mode works end to end, including `/tv`. Your next steps are code only: harden the real paths in `src/inference.ts`, `src/snowflake.ts` and `routes/`, then polish the TV (M5). Arboy connects the accounts and deploys. Scaffold choices to know about:
   - With `MOCK=true` and no `WINK_TOKEN`, auth is skipped. With `MOCK=false` and no token, authenticated routes return 503.

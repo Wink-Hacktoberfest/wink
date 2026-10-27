@@ -3,13 +3,17 @@ const MAX_WORDS = 25;
 /** Makes text safe to speak into the wearer's ear: no markdown, emoji or URLs, at most ~25 words. */
 export function sanitizeSpeech(input: unknown, maxWords = MAX_WORDS): string {
   if (typeof input !== 'string') return '';
+  const wordLimit = Number.isFinite(maxWords) ? Math.max(0, Math.min(MAX_WORDS, Math.floor(maxWords))) : MAX_WORDS;
+  if (!wordLimit) return '';
   let text = input
+    .replace(/<(?:think|analysis)>[\s\S]*?(?:<\/(?:think|analysis)>|$)/gi, ' ')
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/\b(?:https?:\/\/|www\.)\S+/gi, ' ')
+    .replace(/\b(?:[a-z][a-z0-9+.-]*:\/\/|www\.)\S+/gi, ' ')
+    .replace(/\b(?:[a-z0-9-]+\.)+[a-z]{2,24}(?::\d+)?(?:\/[^\s]*)?/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
-    .replace(/[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}\u{20E3}]/gu, '')
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}\u{20E3}]/gu, '')
     .replace(/^\s*(?:#{1,6}|>|[-*+•]|\d+[.)])\s+/gm, '')
     .replace(/[*_`~#|]+/g, '')
     .replace(/\s*[\r\n]+\s*/g, '. ')
@@ -20,8 +24,8 @@ export function sanitizeSpeech(input: unknown, maxWords = MAX_WORDS): string {
   text = text.replace(/^[.,;:\s]+/, '');
   if (!text) return '';
   const words = text.split(' ');
-  if (words.length > maxWords) {
-    const clipped = words.slice(0, maxWords).join(' ');
+  if (words.length > wordLimit) {
+    const clipped = words.slice(0, wordLimit).join(' ');
     // Prefer ending on a full sentence if one finishes inside the cap.
     const lastStop = Math.max(clipped.lastIndexOf('. '), clipped.lastIndexOf('! '), clipped.lastIndexOf('? '));
     text = lastStop > clipped.length / 3 ? clipped.slice(0, lastStop + 1) : clipped.replace(/[,;:\s]+$/, '');

@@ -68,8 +68,9 @@ export async function nearby({ request, env, ctx }: RouteContext): Promise<Respo
   if (memoryId) {
     memory = mock
       ? (await mockStore<{ memory: StoredMemory | null }>(env, 'GET', memoryId)).memory
-      : await getMemory(env, memoryId).catch(() => null);
+      : await getMemory(env, memoryId);
   }
+  if (memoryId && !memory && !query) throw new HttpError(404, 'not_found', 'That memory was not found.');
   const memoryText = memory ? [memory.productQuery, memory.title, memory.objects.join(', ')].filter(Boolean).join('; ') : '';
   const need = [query, memoryText].filter(Boolean).join('; ');
   if (!need) throw new HttpError(400, 'missing_query', 'Send memoryId or query.');

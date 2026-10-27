@@ -46,3 +46,16 @@ test('save and nearby templates', () => {
   assert.equal(nearbySpeech('book stores', [place, place, place]), 'Three book stores nearby. The closest is Gray Owl Books, 400 meters away.');
   assert.equal(nearbySpeech('book stores', []), "I couldn't find any book stores within 3 kilometers.");
 });
+
+test('removes reasoning, bare URLs, and emoji skin tone modifiers before speaking', () => {
+  assert.equal(sanitizeSpeech('<think>Private thought.</think>Saved at example.com/page 👍🏽'), 'Saved at.');
+  assert.equal(sanitizeSpeech('<think>Unfinished reasoning'), '');
+  assert.equal(sanitizeSpeech('Read ftp://example.com/file'), 'Read.');
+});
+
+test('speech cap cannot be raised above contract or become an invalid slice', () => {
+  const text = Array.from({ length: 40 }, () => 'word').join(' ');
+  assert.equal(sanitizeSpeech(text, 100).split(' ').length, 25);
+  assert.equal(sanitizeSpeech(text, Number.NaN).split(' ').length, 25);
+  assert.equal(sanitizeSpeech(text, -1), '');
+});
