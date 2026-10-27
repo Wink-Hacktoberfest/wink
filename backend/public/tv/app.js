@@ -32,6 +32,9 @@
   const changes = new Map(); // Changes received while a list request is in flight.
   const deleting = new Set();
   let returnFocus = null;
+  let memoryFilter = 'all';
+  let searchTerm = '';
+  let asking = false;
 
   function validMemory(m) {
     return m && typeof m.id === 'string' && typeof m.title === 'string' && typeof m.imageUrl === 'string';
@@ -43,7 +46,7 @@
     } catch (_) { return ''; }
   }
   async function request(path, options = {}) {
-    const response = await fetch(api + path, { ...options, headers: authHeaders(), signal: AbortSignal.timeout(15000) });
+    const response = await fetch(api + path, { ...options, headers: { ...options.headers, ...authHeaders() }, signal: options.signal || AbortSignal.timeout(15000) });
     if (response.status === 401) throw new Error('Wrong or missing token. Open /tv?token=<WINK_TOKEN>');
     if (!response.ok) {
       let message = 'HTTP ' + response.status;
@@ -147,20 +150,34 @@
     c.addEventListener('click', () => openMemory(m.id));
     return c;
   }
+  function visibleIds() {
+    const today = new Date().toDateString();
+    return order.filter((id) => {
+      const memory = memories.get(id);
+      if (!memory) return false;
+      if (memoryFilter === 'today' && new Date(memory.createdAt).toDateString() !== today) return false;
+      const text = [memory.title, memory.summary, memory.visibleText, memory.note, ...(memory.objects || [])].join(' ').toLowerCase();
+      return !searchTerm || text.includes(searchTerm);
+    });
+  }
   function renderCount() {
     $('count').textContent = order.length ? order.length + (order.length === 1 ? ' memory' : ' memories') : '';
     const grid = $('grid');
     const empty = grid.querySelector('.empty-wall');
-    if (!order.length && !empty) {
+    const visible = visibleIds();
+    if (!visible.length && !empty) {
       const e = el('div', 'empty-wall');
-      e.innerHTML = 'No memories yet.<br>Look at something and say <b>“Hey Wink, save this.”</b>';
+      if (order.length) e.textContent = 'No moments match this search. Try a different word or choose All memories.';
+      else e.innerHTML = 'Your next favorite memory starts here.<br>Just say <b>“Hey Wink, save this.”</b>';
       grid.append(e);
-    } else if (order.length && empty) empty.remove();
+    } else if (visible.length && empty) empty.remove();
   }
   function renderAll() {
+    // A rebuilt/filtered wall invalidates the pointed-at card and its delete target.
+    clearPointer();
     const grid = $('grid');
     grid.textContent = '';
-    order.forEach((id) => grid.append(card(memories.get(id))));
+    visibleIds().forEach((id) => grid.append(card(memories.get(id))));
     renderCount();
   }
   function addMemory(m, animate) {
@@ -168,6 +185,11 @@
     changes.set(m.id, { revision: ++revision, memory: m });
     const existing = $('grid').querySelector('.card[data-id="' + CSS.escape(m.id) + '"]');
     memories.set(m.id, m);
+    if (searchTerm || memoryFilter !== 'all') {
+      if (!order.includes(m.id)) order.unshift(m.id);
+      renderAll();
+      return;
+    }
     if (existing) { existing.replaceWith(card(m)); return; }
     order.unshift(m.id);
     const c = card(m);
@@ -284,7 +306,7 @@
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     }
-    if (e.key === 'f' && !e.metaKey && !e.ctrlKey) {
+    if (e.key === 'f' && !e.metaKey && !e.ctrlKey && !['INPUT', 'TEXTAREA'].includes(e.target?.tagName) && !e.target?.isContentEditable) {
       if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});
     }
   });
@@ -297,6 +319,7 @@
     p.classList.add('flash');
   }
   function showAnswer(ev) {
+    selectPanel('answer');
     $('answerLabel').textContent = 'Answer';
     $('answerQ').textContent = ev.question ? '“' + ev.question + '”' : '';
     $('answerSpeech').textContent = ev.speech;
@@ -320,6 +343,7 @@
     flash('answer');
   }
   function showGlance(ev) {
+    selectPanel('answer');
     $('answerLabel').textContent = 'Glance';
     $('answerQ').textContent = ev.title;
     $('answerSpeech').textContent = ev.speech;
@@ -330,6 +354,7 @@
     flash('answer');
   }
   function showNearby(ev) {
+    selectPanel('nearbyPanel');
     $('nearbySpeech').textContent = ev.speech;
     const list = $('places');
     list.textContent = '';
@@ -438,6 +463,86 @@
       if (c) c.classList.add('hover');
     }
   }
+
+  // ---------- browsing and asking ----------
+  function selectPanel(id) {
+    for (const panel of ['answer', 'livePanel', 'nearbyPanel']) $(panel).hidden = panel !== id;
+    document.querySelectorAll('[data-panel]').forEach((button) => {
+      const selected = button.dataset.panel === id;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-selected', String(selected));
+      button.setAttribute('tabindex', selected ? '0' : '-1');
+    });
+  }
+  function visit(target) {
+    const section = target === 'memories' ? $('memoriesSection') : $('companion');
+    if (target !== 'memories') selectPanel(target);
+    section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    section.focus({ preventScroll: true });
+    document.querySelectorAll('[data-nav]').forEach((button) => {
+      const selected = button.dataset.nav === target;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-current', selected ? 'location' : 'false');
+    });
+  }
+  document.querySelectorAll('[data-panel]').forEach((button, index, buttons) => {
+    button.addEventListener('click', () => selectPanel(button.dataset.panel));
+    button.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1
+        : (index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+      selectPanel(buttons[next].dataset.panel);
+      buttons[next].focus();
+    });
+  });
+  document.querySelectorAll('[data-nav]').forEach((button) => button.addEventListener('click', () => visit(button.dataset.nav)));
+  $('exploreMemories').addEventListener('click', () => visit('memories'));
+  $('memorySearch').addEventListener('input', (event) => {
+    searchTerm = event.target.value.trim().toLowerCase();
+    renderAll();
+  });
+  document.querySelectorAll('[data-filter]').forEach((button) => button.addEventListener('click', () => {
+    memoryFilter = button.dataset.filter;
+    document.querySelectorAll('[data-filter]').forEach((item) => {
+      const selected = item.dataset.filter === memoryFilter;
+      item.classList.toggle('active', selected);
+      item.setAttribute('aria-pressed', String(selected));
+    });
+    renderAll();
+  }));
+  $('fullscreen').addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else document.documentElement.requestFullscreen().catch(() => toast('Fullscreen is unavailable in this browser.'));
+  });
+  $('askForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const question = $('askInput').value.trim();
+    if (!question || asking) return;
+    asking = true;
+    $('askSubmit').disabled = true;
+    $('askForm').setAttribute('aria-busy', 'true');
+    $('askHint').textContent = 'Looking through your saved moments…';
+    selectPanel('answer');
+    try {
+      const response = await request('/v1/ask', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, location: null }), signal: AbortSignal.timeout(70000),
+      });
+      const answer = await response.json();
+      if (typeof answer.speech !== 'string' || !Array.isArray(answer.memories)) throw new Error('Invalid answer response');
+      showAnswer({ question, ...answer });
+      if ($('askInput').value.trim() === question) $('askInput').value = '';
+      $('askHint').textContent = 'Answers grounded in your saved moments.';
+    } catch (error) {
+      $('askHint').textContent = 'Could not find an answer. ' + error.message;
+    } finally {
+      asking = false;
+      $('askSubmit').disabled = false;
+      $('askForm').setAttribute('aria-busy', 'false');
+    }
+  });
+  selectPanel('answer');
 
   // ---------- live socket ----------
   function handle(ev) {

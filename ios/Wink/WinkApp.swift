@@ -32,7 +32,7 @@ struct WinkApp: App {
                 .onOpenURL { url in
                     Task { await controller.handleOpenURL(url) }
                 }
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
         }
     }
 }
