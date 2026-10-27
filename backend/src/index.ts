@@ -24,7 +24,9 @@ async function live({ request, env, url }: RouteContext): Promise<Response> {
   if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket') {
     throw new HttpError(426, 'upgrade_required', 'Connect with a WebSocket.');
   }
-  return connectLive(env, request, url.searchParams.get('role') === 'glasses' ? 'glasses' : 'tv');
+  const role = url.searchParams.get('role') ?? 'tv';
+  if (role !== 'tv' && role !== 'glasses') throw new HttpError(400, 'invalid_role', 'role must be tv or glasses.');
+  return connectLive(env, request, role);
 }
 
 const ROUTES: Route[] = [
@@ -76,7 +78,11 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
   await authorize(request, env, url, found.auth);
   const match = found.pattern.exec(url.pathname)!;
   const params: Record<string, string> = {};
-  found.keys.forEach((key, i) => { params[key] = decodeURIComponent(match[i + 1] ?? ''); });
+  try {
+    found.keys.forEach((key, i) => { params[key] = decodeURIComponent(match[i + 1] ?? ''); });
+  } catch {
+    throw new HttpError(400, 'invalid_path', 'The request path is not valid.');
+  }
   return found.handler({ request, env, ctx, url, params });
 }
 

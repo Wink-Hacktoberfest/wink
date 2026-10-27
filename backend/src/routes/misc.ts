@@ -1,9 +1,10 @@
 import { chatModel, visionTarget } from '../inference.ts';
-import { HttpError, isRecord, json, readJson } from '../http.ts';
+import { HttpError, json, readJson } from '../http.ts';
 import { broadcast } from '../live.ts';
 import { sampleImageSvg } from '../mock.ts';
 import { isMock } from '../parse.ts';
-import type { LiveEvent } from '../types.ts';
+import { parseClientEvent } from '../events.ts';
+export { parseClientEvent } from '../events.ts';
 import type { RouteContext } from './context.ts';
 
 export async function health({ env }: RouteContext): Promise<Response> {
@@ -30,32 +31,11 @@ export async function image({ env, params }: RouteContext): Promise<Response> {
   return new Response(object.body, {
     headers: {
       'Content-Type': object.httpMetadata?.contentType ?? 'image/jpeg',
-      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
       ETag: object.httpEtag,
     },
   });
-}
-
-const STATES = ['idle', 'listening', 'thinking', 'speaking', 'paused'];
-const GESTURES = ['point', 'frame', 'lasso', 'palm', 'thumbsUp', 'fingers', 'pinch', 'flick'];
-
-/** Validates the subset of LiveEvent the phone may POST: status, transcript, gesture. */
-export function parseClientEvent(body: Record<string, unknown>): LiveEvent {
-  if (body.type === 'status' && STATES.includes(body.state as string)) {
-    return typeof body.text === 'string'
-      ? { type: 'status', state: body.state as never, text: body.text.slice(0, 500) }
-      : { type: 'status', state: body.state as never };
-  }
-  if (body.type === 'transcript' && typeof body.text === 'string') {
-    return { type: 'transcript', text: body.text.slice(0, 1000) };
-  }
-  if (body.type === 'gesture' && GESTURES.includes(body.gesture as string)) {
-    const event: LiveEvent = { type: 'gesture', gesture: body.gesture as never };
-    if (typeof body.value === 'number') event.value = body.value;
-    if (isRecord(body.box)) event.box = body.box as never;
-    return event;
-  }
-  throw new HttpError(400, 'invalid_event', 'Send a status, transcript or gesture event.');
 }
 
 export async function events({ request, env }: RouteContext): Promise<Response> {

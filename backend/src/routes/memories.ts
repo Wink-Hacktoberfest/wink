@@ -3,7 +3,7 @@ import { HttpError, json, readUpload } from '../http.ts';
 import { broadcast, mockStore } from '../live.ts';
 import { mockVision } from '../mock.ts';
 import { isMock, optionalString, parseSelection, resolveLocation } from '../parse.ts';
-import { deleteMemory, insertMemory, listMemories, matchBusiness } from '../snowflake.ts';
+import { deleteMemory, getMemory, insertMemory, listMemories, matchBusiness, SnowflakeRejectedError } from '../snowflake.ts';
 import { sanitizeSpeech } from '../speech.ts';
 import type { Place, StoredMemory, VisionResult } from '../types.ts';
 import { background, capitalize, toMemory, withTimeout, type RouteContext } from './context.ts';
@@ -80,8 +80,19 @@ export async function createMemory({ request, env, ctx, url }: RouteContext): Pr
     place,
     productQuery: vision.productQuery,
   };
-  if (mock) await mockStore(env, 'POST', '', stored);
-  else await insertMemory(env, stored);
+  try {
+    if (mock) await mockStore(env, 'POST', '', stored);
+    else await insertMemory(env, stored);
+  } catch (error) {
+    // A timeout/network failure may follow a committed INSERT: keep its image until reconciled.
+    // Only discard images when Snowflake explicitly rejected the statement before committing.
+    const definiteFailure = error instanceof SnowflakeRejectedError ||
+      (error instanceof HttpError && error.code === 'not_configured');
+    if (definiteFailure && !imageKey.startsWith('sample-')) {
+      await env.IMAGES.delete(imageKey).catch(() => console.error('Failed to remove an uncommitted image.'));
+    }
+    throw error;
+  }
 
   const memory = toMemory(stored, url.origin);
   const speech = saveSpeech(memory.title, note);
@@ -90,7 +101,7 @@ export async function createMemory({ request, env, ctx, url }: RouteContext): Pr
 }
 
 export async function getMemories({ env, url }: RouteContext): Promise<Response> {
-  const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit') ?? '50') || 50));
+  const limit = Math.min(200, Math.max(1, Math.floor(Number(url.searchParams.get('limit') ?? '50')) || 50));
   const stored = isMock(env)
     ? (await mockStore<{ memories: StoredMemory[] }>(env, 'GET')).memories.slice(0, limit)
     : await listMemories(env, limit);
@@ -100,12 +111,17 @@ export async function getMemories({ env, url }: RouteContext): Promise<Response>
 export async function removeMemory({ env, ctx, params }: RouteContext): Promise<Response> {
   const id = params.id ?? '';
   if (!/^[A-Za-z0-9-]{1,64}$/.test(id)) throw new HttpError(400, 'invalid_id', 'That memory id is not valid.');
-  const imageKey = isMock(env)
-    ? (await mockStore<{ imageKey: string | null }>(env, 'DELETE', id)).imageKey
-    : await deleteMemory(env, id);
-  if (imageKey && !imageKey.startsWith('sample-')) {
-    await env.IMAGES.delete(imageKey).catch(() => undefined);
+  const mock = isMock(env);
+  const stored = mock
+    ? (await mockStore<{ memory: StoredMemory | null }>(env, 'GET', id)).memory
+    : await getMemory(env, id);
+  // Delete the private image first. If R2 fails the row survives, so retry still knows its key.
+  if (stored && !stored.imageKey.startsWith('sample-')) {
+    try { await env.IMAGES.delete(stored.imageKey); }
+    catch { throw new HttpError(502, 'storage_error', 'The image could not be deleted. Please try again.'); }
   }
+  if (mock) await mockStore(env, 'DELETE', id);
+  else await deleteMemory(env, id);
   await background(ctx, broadcast(env, { type: 'memory.deleted', id }));
   return new Response(null, { status: 204 });
 }

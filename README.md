@@ -29,7 +29,7 @@ Glasses camera + mic ─► iPhone: WhisperKit ("Hey Wink") + MediaPipe Hands (g
 ## Snowflake
 
 - **Dataset:** Overture Maps Places, the free CARTO listing on the Snowflake Marketplace.
-- **How CoCo helped:** see `snowflake/README.md` and the screenshots in `docs/coco/`.
+- **CoCo evidence:** exploration prompts and service-role checks are ready in `snowflake/README.md`. Actual account validation and screenshots in `docs/coco/` are pending; local tests use mocked provider transports.
 
 ## Repo
 
