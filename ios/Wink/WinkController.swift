@@ -54,7 +54,10 @@ final class WinkController {
     private(set) var lastPlaces: [Place] = []
     private(set) var cameraError: String?
     var tvPointerMode = false
-    var sendFramePreviews = true
+    /// Off unless the wearer turns it on: the POV preview goes to the shared live room. Never sent while paused.
+    var sendFramePreviews = UserDefaults.standard.bool(forKey: WinkController.framePreviewsKey) {
+        didSet { UserDefaults.standard.set(sendFramePreviews, forKey: Self.framePreviewsKey) }
+    }
 
     private(set) var lastMemoryId: String?
     var trackerName: String { pipeline.trackerName }
@@ -68,6 +71,7 @@ final class WinkController {
 
     static let selectionFreshness: TimeInterval = 3
     static let pendingTimeout: TimeInterval = 12
+    static let framePreviewsKey = "wink.sendFramePreviews"
 
     var activeSource: any FrameSource { sourceKind == .glasses ? glasses : phone }
 
@@ -181,7 +185,7 @@ final class WinkController {
 
     private func onFrame(_ frame: Frame) {
         preview = frame.image
-        if sendFramePreviews { liveSocket.sendFramePreview(frame.image) }
+        if sendFramePreviews, state != .paused { liveSocket.sendFramePreview(frame.image) }
         guard !gestureBusy else { return }
         gestureBusy = true
         let choosing = !lastPlaces.isEmpty && Date().timeIntervalSince(placesAt) < 30
