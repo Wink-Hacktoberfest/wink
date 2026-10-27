@@ -12,11 +12,15 @@ enum AudioSessionManager {
         preferBluetoothInput()
     }
 
-    /// Picks the glasses (HFP) mic when one is connected.
+    /// Picks the glasses (HFP) mic when one is connected, otherwise the iPhone's own mic.
+    /// The glasses camera stream can take over the Bluetooth link and drop HFP, which would leave no input at all.
     static func preferBluetoothInput() {
         let session = AVAudioSession.sharedInstance()
-        if let bt = session.availableInputs?.first(where: { $0.portType == .bluetoothHFP }) {
+        let inputs = session.availableInputs ?? []
+        if let bt = inputs.first(where: { $0.portType == .bluetoothHFP }) {
             try? session.setPreferredInput(bt)
+        } else if let builtIn = inputs.first(where: { $0.portType == .builtInMic }) {
+            try? session.setPreferredInput(builtIn)
         }
     }
 

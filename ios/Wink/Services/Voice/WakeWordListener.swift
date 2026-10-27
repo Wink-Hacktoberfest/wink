@@ -49,6 +49,7 @@ final class WakeWordListener {
     @ObservationIgnored private let transcriber = WhisperTranscriber()
     @ObservationIgnored private var followUpUntil: Date?
     @ObservationIgnored private var levelTimer: Timer?
+    @ObservationIgnored private var configObserver: NSObjectProtocol?
 
     /// Download + load the Whisper model. Safe to call repeatedly.
     func preloadModel() {
@@ -77,8 +78,20 @@ final class WakeWordListener {
         segmenter.onUtterance = { [weak self] samples, ptt in
             Task { @MainActor in self?.handle(samples: samples, pushToTalk: ptt) }
         }
+        // AVAudioEngine stops itself when the route or format changes (e.g. the glasses camera grabs Bluetooth).
+        if configObserver == nil {
+            configObserver = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange,
+                                                                    object: engine, queue: .main) { [weak self] _ in
+                Task { @MainActor in self?.restart() }
+            }
+        }
         let input = engine.inputNode
-        let format = input.outputFormat(forBus: 0)
+        var format = input.outputFormat(forBus: 0)
+        if format.sampleRate <= 0 || format.channelCount == 0 {
+            // No input on the current route: fall back to the iPhone mic and try once more.
+            AudioSessionManager.preferBluetoothInput()
+            format = input.outputFormat(forBus: 0)
+        }
         guard format.sampleRate > 0, format.channelCount > 0 else {
             micError = "No microphone input available"
             return

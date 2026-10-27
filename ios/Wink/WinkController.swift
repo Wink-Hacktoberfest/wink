@@ -109,7 +109,8 @@ final class WinkController {
         NotificationCenter.default.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { [weak self] note in
             let raw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
             let reason = raw.flatMap(AVAudioSession.RouteChangeReason.init(rawValue:))
-            guard reason == .newDeviceAvailable || reason == .oldDeviceUnavailable else { return }
+            // Restart on any real route change; the glasses camera session reroutes Bluetooth without a device change.
+            guard reason != .categoryChange, reason != nil else { return }
             Task { @MainActor in
                 AudioSessionManager.preferBluetoothInput()
                 self?.listener.restart()
