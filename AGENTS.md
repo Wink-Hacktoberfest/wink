@@ -160,6 +160,7 @@ Newest first. Format: `HH:MM from → to: message`.
 3. Cloudflare: `npx wrangler login`, `npx wrangler r2 bucket create wink-images`.
 4. Secrets: `WINK_TOKEN` (any long random string), `DO_MODEL_ACCESS_KEY`, `SNOWFLAKE_PAT` into `backend/.dev.vars` and `wrangler secret put`; set `SNOWFLAKE_ACCOUNT_URL` + `VISION_MODEL` in `wrangler.jsonc`.
 5. `npm run deploy`, set `"MOCK": "false"`, deploy again, check `/v1/health`.
+6. **Rotate the Snowflake PAT before it expires** (the first one expires around 2026-11-02): `docs/runbooks/snowflake-pat-rotation.md`.
 
 ## Decisions log
 
