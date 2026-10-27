@@ -86,12 +86,17 @@ final class WakeWordListener {
                 Task { @MainActor in self?.restart() }
             }
         }
+        // Reset so the engine picks up the current route's hardware format (it changes when the glasses camera
+        // starts and the mic moves from the glasses to the iPhone). A stale format makes installTap raise and crash.
+        engine.stop()
+        engine.inputNode.removeTap(onBus: 0)
+        engine.reset()
         let input = engine.inputNode
-        var format = input.outputFormat(forBus: 0)
+        var format = input.inputFormat(forBus: 0)
         if format.sampleRate <= 0 || format.channelCount == 0 {
             // No input on the current route: fall back to the iPhone mic and try once more.
             AudioSessionManager.preferBluetoothInput()
-            format = input.outputFormat(forBus: 0)
+            format = input.inputFormat(forBus: 0)
         }
         guard format.sampleRate > 0, format.channelCount > 0 else {
             micError = "No microphone input available"
@@ -109,8 +114,8 @@ final class WakeWordListener {
         }
         inputRetries = 0
         let segmenter = self.segmenter
-        input.removeTap(onBus: 0)
-        input.installTap(onBus: 0, bufferSize: 4096, format: format) { buffer, _ in
+        // nil = the node's current format, which always matches the hardware; the segmenter converts to 16 kHz.
+        input.installTap(onBus: 0, bufferSize: 4096, format: nil) { buffer, _ in
             segmenter.process(buffer)
         }
         do {
