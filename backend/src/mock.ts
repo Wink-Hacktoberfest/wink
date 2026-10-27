@@ -1,6 +1,17 @@
 import type { Location, Place, StoredMemory, VisionResult } from './types.ts';
 
-/** Canned data for MOCK=true. Sample images are SVGs the Worker draws at /v1/images/sample-<name>. */
+/** Canned data for MOCK=true. Image URLs remain /v1/images/sample-<name>. */
+
+/** Only these known demo samples have generated photographs; uploads never use this mapping. */
+export function sampleImageAsset(key: string): string | null {
+  const assets: Record<string, string> = {
+    'sample-wine': '/tv/demo/wine.webp',
+    'sample-book': '/tv/demo/book.webp',
+    'sample-keys': '/tv/demo/keys.webp',
+    'sample-coffee': '/tv/demo/coffee.webp',
+  };
+  return Object.hasOwn(assets, key) ? assets[key]! : null;
+}
 
 type Sample = VisionResult & { key: string; match: RegExp; color: string; category: string; label: string };
 

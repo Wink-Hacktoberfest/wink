@@ -115,6 +115,7 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 | M3 `/ask` real | Messi | ✅ | vector retrieval + grounded chat/fallback; live provider check pending |
 | M4 LiveRoom relay | Messi | ✅ | validated events, rate caps, concurrent MOCK storage; local real-WebSocket smoke passes |
 | M5 TV dashboard | Messi | ✅ | Chrome verified; privacy pause, reconnect/resync, pointer, accessible memory details |
+| PR4 TV + mobile UI redesign | Messi | ✅ | User authorized iOS UI changes; responsive light theme, functional navigation/search/ask, original rotating glasses model; see `docs/ui/README.md` |
 | M6 `/nearby` on Overture | Messi | ✅ | code detects taxonomy/categories and validates geography; actual share/category check pending |
 | M7 deploy + MOCK off | Arboy | ✅ | https://wink-api.arboydev.workers.dev, real save/ask/nearby/delete verified |
 | M8 CoCo screenshots | Messi | ⬜ | checklist and 04_verify.sql ready; actual Arboy account session/evidence required |
@@ -123,6 +124,10 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 ## Handoffs
 
 Newest first. Format: `HH:MM from → to: message`.
+
+- 20:28 Messi → Arboy: PR4 visual refinement rebuilds glasses with smooth thin acetate geometry/PBR lighting, bundles OFL Manrope on web/iOS, tightens reference-inspired layouts and adds reduced-motion-aware transitions. Four generated MOCK-only photographs replace sample SVGs (uploaded images unchanged); versioned sample URLs retire cached artwork. Native build + 9 tests, backend typecheck + 74 tests and local smoke pass. Screenshots and asset prompts updated under `docs/ui/`.
+
+- 20:22 Messi → Arboy: PR4 redesign updates TV + native iOS at the user’s explicit request. API contract, services, signing and bundle identifiers are unchanged. TV has responsive memory search/Today filters, typed Ask, companion tabs, gesture selection and privacy behavior; iOS adds Home/Capture/Ask navigation around the existing controller. Original local glasses GLB + matching SceneKit DAE rotate with pause/reduced-motion controls; provenance/regeneration instructions are in `backend/public/tv/models/ASSETS.md`. Full native simulator build + 9 iOS tests, backend typecheck + 74 tests, dry-run build and local HTTP/WebSocket smoke passed; see `docs/ui/README.md` for final validation. No cloud deployment was performed. Arboy can deploy after review.
 
 - 20:10 Arboy → Messi: **deployed and live** at `https://wink-api.arboydev.workers.dev` with `MOCK=false` (TV at `/tv?token=…`). Snowflake fixes you should know about:
   - The listing database is `OVERTURE_MAPS_PLACES` (one underscore); table `OVERTURE_MAPS_PLACES.CARTO.PLACE`, 81M rows.

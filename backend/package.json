@@ -12,12 +12,15 @@
     "test": "node --import tsx --test test/*.test.ts",
     "check": "npm run typecheck && npm test",
     "build": "wrangler deploy --dry-run --outdir dist",
+    "build:glasses": "node tools/build-glasses.mjs",
     "deploy": "wrangler deploy",
     "dev:real": "wrangler dev",
     "smoke": "node test/smoke.mjs"
   },
   "devDependencies": {
     "@types/node": "26.6.5",
+    "esbuild": "0.28.2",
+    "three": "0.180.0",
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "wrangler": "4.152.0"
