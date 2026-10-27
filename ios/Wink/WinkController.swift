@@ -109,7 +109,8 @@ final class WinkController {
         NotificationCenter.default.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { [weak self] note in
             let raw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
             let reason = raw.flatMap(AVAudioSession.RouteChangeReason.init(rawValue:))
-            guard reason == .newDeviceAvailable || reason == .oldDeviceUnavailable else { return }
+            // Restart on any real route change; the glasses camera session reroutes Bluetooth without a device change.
+            guard reason != .categoryChange, reason != nil else { return }
             Task { @MainActor in
                 AudioSessionManager.preferBluetoothInput()
                 self?.listener.restart()
@@ -157,11 +158,18 @@ final class WinkController {
         frameTask?.cancel()
         let source = activeSource
         cameraError = nil
+        // Listen on the iPhone mic while the glasses camera streams, so the mic doesn't compete for Bluetooth.
+        AudioSessionManager.useGlassesMic = kind != .glasses
+        AudioSessionManager.preferBluetoothInput()
+        listener.restart()
         do {
             try await source.start()
         } catch {
             cameraError = error.localizedDescription
         }
+        // The route settles only once the camera is up; grab the mic again on the final route.
+        AudioSessionManager.preferBluetoothInput()
+        listener.restart()
         let stream = source.frames()
         frameTask = Task { [weak self] in
             for await frame in stream {
@@ -446,8 +454,9 @@ final class WinkController {
             await glasses.register()
             return
         }
-        await switchSource(to: .glasses)
-        if sourceKind == .glasses, !glasses.isRunning {
+        if sourceKind != .glasses {
+            await switchSource(to: .glasses)  // already starts the glasses source
+        } else if !glasses.isRunning {
             await startSource(.glasses)
         }
     }

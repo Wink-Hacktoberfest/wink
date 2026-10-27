@@ -44,11 +44,13 @@ final class WakeWordListener {
     /// Called the moment an utterance is captured and sent to Whisper.
     @ObservationIgnored var onUtteranceCaptured: (() -> Void)?
 
-    @ObservationIgnored private let engine = AVAudioEngine()
+    @ObservationIgnored private var engine = AVAudioEngine()
     @ObservationIgnored private let segmenter = UtteranceSegmenter()
     @ObservationIgnored private let transcriber = WhisperTranscriber()
     @ObservationIgnored private var followUpUntil: Date?
     @ObservationIgnored private var levelTimer: Timer?
+    @ObservationIgnored private var configObserver: NSObjectProtocol?
+    @ObservationIgnored private var inputRetries = 0
 
     /// Download + load the Whisper model. Safe to call repeatedly.
     func preloadModel() {
@@ -77,15 +79,42 @@ final class WakeWordListener {
         segmenter.onUtterance = { [weak self] samples, ptt in
             Task { @MainActor in self?.handle(samples: samples, pushToTalk: ptt) }
         }
+        // A fresh engine per start reads the current route's real hardware format. Reusing one engine across
+        // route switches (glasses mic -> iPhone mic when the glasses camera starts) leaves a stale format,
+        // which crashes installTap or fails start() with -10868 (format not supported).
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+        engine = AVAudioEngine()
+        if let observer = configObserver { NotificationCenter.default.removeObserver(observer) }
+        // AVAudioEngine stops itself when the route or format changes; restart on a new engine.
+        configObserver = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange,
+                                                                object: engine, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.restart() }
+        }
         let input = engine.inputNode
-        let format = input.outputFormat(forBus: 0)
+        var format = input.inputFormat(forBus: 0)
+        if format.sampleRate <= 0 || format.channelCount == 0 {
+            // No input on the current route: fall back to the iPhone mic and try once more.
+            AudioSessionManager.preferBluetoothInput()
+            format = input.inputFormat(forBus: 0)
+        }
         guard format.sampleRate > 0, format.channelCount > 0 else {
             micError = "No microphone input available"
+            // Right after a route switch (e.g. glasses camera starting) the new input isn't ready yet; retry briefly.
+            if inputRetries < 10 {
+                inputRetries += 1
+                Task { [weak self] in
+                    try? await Task.sleep(for: .milliseconds(500))
+                    guard let self, !self.isListening else { return }
+                    self.start()
+                }
+            }
             return
         }
+        inputRetries = 0
         let segmenter = self.segmenter
-        input.removeTap(onBus: 0)
-        input.installTap(onBus: 0, bufferSize: 4096, format: format) { buffer, _ in
+        // nil = the node's current format, which always matches the hardware; the segmenter converts to 16 kHz.
+        input.installTap(onBus: 0, bufferSize: 4096, format: nil) { buffer, _ in
             segmenter.process(buffer)
         }
         do {
@@ -96,6 +125,15 @@ final class WakeWordListener {
         } catch {
             micError = error.localizedDescription
             input.removeTap(onBus: 0)
+            // The route can still be settling (e.g. -10868 right after the glasses camera starts); retry on a fresh engine.
+            if inputRetries < 10 {
+                inputRetries += 1
+                Task { [weak self] in
+                    try? await Task.sleep(for: .milliseconds(500))
+                    guard let self, !self.isListening else { return }
+                    self.start()
+                }
+            }
         }
         levelTimer?.invalidate()
         levelTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
