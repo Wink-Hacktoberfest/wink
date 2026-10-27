@@ -1,7 +1,7 @@
 import { chatModel, visionTarget } from '../inference.ts';
 import { HttpError, json, readJson } from '../http.ts';
 import { broadcast } from '../live.ts';
-import { sampleImageSvg } from '../mock.ts';
+import { sampleImageAsset, sampleImageSvg } from '../mock.ts';
 import { isMock } from '../parse.ts';
 import { parseClientEvent } from '../events.ts';
 export { parseClientEvent } from '../events.ts';
@@ -19,9 +19,21 @@ export async function health({ env }: RouteContext): Promise<Response> {
   });
 }
 
-export async function image({ env, params }: RouteContext): Promise<Response> {
+export async function image({ env, params, url }: RouteContext): Promise<Response> {
   const key = params.key ?? '';
   if (!/^[A-Za-z0-9._-]{1,128}$/.test(key)) throw new HttpError(404, 'not_found', 'Image not found.');
+  const asset = isMock(env) ? sampleImageAsset(key) : null;
+  if (asset && env.ASSETS) {
+    try {
+      // Fetch only an allowlisted bundled asset, without forwarding tokens or query strings.
+      const response = await env.ASSETS.fetch(new Request(new URL(asset, url.origin)));
+      if (response.ok && response.headers.get('Content-Type')?.startsWith('image/webp')) {
+        return new Response(response.body, { headers: {
+          'Content-Type': 'image/webp', 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff',
+        } });
+      }
+    } catch { /* Keep the existing SVG fallback available without an asset binding. */ }
+  }
   const svg = sampleImageSvg(key);
   if (svg) {
     return new Response(svg, { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' } });

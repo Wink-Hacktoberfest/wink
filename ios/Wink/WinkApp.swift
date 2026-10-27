@@ -1,4 +1,5 @@
 import MWDATCore
+import CoreText
 import SwiftUI
 
 @main
@@ -10,6 +11,9 @@ struct WinkApp: App {
     @State private var controller: WinkController
 
     init() {
+        if let fontURL = Bundle.main.url(forResource: "Manrope", withExtension: "ttf") {
+            CTFontManagerRegisterFontsForURL(fontURL as CFURL, .process, nil)
+        }
         do {
             try Wearables.configure()
             Self.wearablesConfigured = true

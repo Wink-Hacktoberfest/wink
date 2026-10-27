@@ -17,51 +17,104 @@ const scene = new T.Scene();
 const glasses = new T.Group();
 glasses.name = 'Wink original smart glasses';
 scene.add(glasses);
-const acetate = new T.MeshStandardMaterial({ name: 'Matte graphite acetate', color: '#101113', roughness: .32, metalness: .12 });
-const lens = new T.MeshStandardMaterial({ name: 'Clear smoke lenses', color: '#aebec0', roughness: .1, metalness: .08, transparent: true, opacity: .16, side: T.DoubleSide, depthWrite: false });
-const silver = new T.MeshStandardMaterial({ name: 'Satin hardware', color: '#81878b', metalness: .75, roughness: .28 });
-const camera = new T.MeshStandardMaterial({ name: 'Camera glass', color: '#090c0e', metalness: .5, roughness: .12 });
-const reflection = new T.MeshStandardMaterial({ name: 'Camera highlight', color: '#4b6270', metalness: .6, roughness: .13 });
+const acetate = new T.MeshPhysicalMaterial({ name: 'Matte graphite acetate', color: '#121315', roughness: .28, metalness: 0, clearcoat: .35, clearcoatRoughness: .22 });
+const lens = new T.MeshPhysicalMaterial({ name: 'Clear optical lenses', color: '#b8c8ca', roughness: .055, metalness: 0, transparent: true, opacity: .115, side: T.DoubleSide, depthWrite: false, clearcoat: 1, clearcoatRoughness: .035, reflectivity: .65 });
+const silver = new T.MeshStandardMaterial({ name: 'Graphite titanium hardware', color: '#35393b', metalness: .78, roughness: .3 });
+const camera = new T.MeshPhysicalMaterial({ name: 'Camera glass', color: '#070b10', metalness: .15, roughness: .035, clearcoat: 1 });
+const reflection = new T.MeshStandardMaterial({ name: 'Camera optical coating', color: '#263e4b', metalness: .5, roughness: .12 });
 function mesh(name, geometry, material, x=0, y=0, z=0) {
   const object = new T.Mesh(geometry, material); object.name = name; object.position.set(x,y,z); glasses.add(object); return object;
 }
 function outline(inner=false) {
   const p = new T.Shape();
   if (!inner) {
-    p.moveTo(.25,.58); p.bezierCurveTo(.7,.81,1.94,.81,2.58,.64);
-    p.bezierCurveTo(2.78,.56,2.64,-.12,2.47,-.61);
-    p.bezierCurveTo(2.32,-1.02,1.48,-1.01,.96,-.82);
-    p.bezierCurveTo(.52,-.65,.29,-.02,.25,.58);
+    p.moveTo(.32,.54); p.bezierCurveTo(.79,.68,2.12,.68,2.76,.53);
+    p.bezierCurveTo(2.84,.49,2.72,-.2,2.48,-.76);
+    p.bezierCurveTo(2.32,-1.02,1.45,-1.07,1.01,-.88);
+    p.bezierCurveTo(.61,-.71,.4,-.06,.32,.54);
   } else {
-    p.moveTo(.55,.42); p.bezierCurveTo(1.04,.62,1.91,.63,2.28,.47);
-    p.bezierCurveTo(2.47,.36,2.35,-.15,2.21,-.53);
-    p.bezierCurveTo(2.1,-.81,1.48,-.81,1.08,-.65);
-    p.bezierCurveTo(.73,-.51,.57,-.02,.55,.42);
+    p.moveTo(.6,.38); p.bezierCurveTo(1.01,.51,2.03,.51,2.46,.36);
+    p.bezierCurveTo(2.56,.27,2.43,-.21,2.26,-.67);
+    p.bezierCurveTo(2.13,-.88,1.49,-.91,1.12,-.75);
+    p.bezierCurveTo(.83,-.61,.65,-.08,.6,.38);
   }
   p.closePath(); return p;
 }
-for (const side of [-1,1]) {
-  const shape = outline(); shape.holes.push(new T.Path(outline(true).getPoints(32).reverse()));
-  const rim = mesh(`${side === 1 ? 'Right' : 'Left'} sculpted frame`, new T.ExtrudeGeometry(shape,{ depth:.2, bevelEnabled:true, bevelThickness:.045, bevelSize:.045, bevelSegments:3, curveSegments:28 }),acetate,0,0,.15);
-  rim.scale.x=side;
-  const glass = mesh('Clear lens',new T.ShapeGeometry(outline(true),32),lens,0,0,.21); glass.scale.x=side;
-  // The open temples arc inward, then turn gently down behind the ear.
-  const temple = new T.Shape();
-  temple.moveTo(.34,.59); temple.bezierCurveTo(-.35,.59,-1.5,.51,-2.55,.28);
-  temple.bezierCurveTo(-2.87,.2,-2.9,-.2,-2.94,-.65);
-  temple.bezierCurveTo(-2.93,-.8,-2.72,-.83,-2.69,-.64);
-  temple.lineTo(-2.52,-.09); temple.bezierCurveTo(-1.6,.15,-.58,.19,.34,.21); temple.closePath();
-  const arm = mesh('Sculpted temple',new T.ExtrudeGeometry(temple,{depth:.16,bevelEnabled:true,bevelThickness:.055,bevelSize:.05,bevelSegments:3,curveSegments:24}),acetate,side*2.54,0,0);
-  arm.rotation.y=-Math.PI/2; if(side===-1) arm.position.x-=.16;
-  mesh('Hinge',new T.BoxGeometry(.13,.19,.22),silver,side*2.57,.36,.14);
-  const ring = mesh('Camera bezel',new T.TorusGeometry(.105,.018,10,32),silver,side*2.48,.48,.408);
-  mesh('Camera',new T.CylinderGeometry(.088,.088,.018,32),camera,side*2.48,.48,.412).rotation.x=Math.PI/2;
-  mesh('Camera glint',new T.SphereGeometry(.023,12,8),reflection,side*2.46,.506,.427);
+const signedPow=(v,p)=>Math.sign(v)*Math.pow(Math.abs(v),p);
+const outer=outline().getPoints(40).slice(0,-1), inner=outline(true).getPoints(40).slice(0,-1);
+// A continuous rounded rectangular section creates smoothly polished acetate,
+// with no flat extrusion caps, bevel seams or separate toy-like rim pieces.
+function frameGeometry() {
+  const positions=[],indices=[],segments=24,n=outer.length;
+  for(let i=0;i<n;i++) {
+    const o=outer[i],q=inner[i], cx=(o.x+q.x)/2,cy=(o.y+q.y)/2;
+    for(let j=0;j<segments;j++) {
+      const angle=j/segments*Math.PI*2,rad=signedPow(Math.cos(angle),.58);
+      const x=cx+(o.x-q.x)*.5*rad,y=cy+(o.y-q.y)*.5*rad;
+      const z=.2-.095*Math.pow(x/2.8,2)+.025*y+.105*signedPow(Math.sin(angle),.58);
+      positions.push(x,y,z);
+    }
+  }
+  for(let i=0;i<n;i++)for(let j=0;j<segments;j++) {
+    const a=i*segments+j,b=((i+1)%n)*segments+j,c=((i+1)%n)*segments+(j+1)%segments,d=i*segments+(j+1)%segments;
+    indices.push(a,d,b,b,d,c);
+  }
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setIndex(indices);g.computeVertexNormals();return g;
 }
-const bridgePath = new T.CatmullRomCurve3([new T.Vector3(-.43,.41,.27),new T.Vector3(-.22,.48,.31),new T.Vector3(0,.49,.33),new T.Vector3(.22,.48,.31),new T.Vector3(.43,.41,.27)]);
-mesh('Saddle bridge',new T.TubeGeometry(bridgePath,24,.115,10,false),acetate);
-// Small nose rests remain part of the acetate structure.
-for(const side of [-1,1]) mesh('Nose rest',new T.SphereGeometry(.13,16,12),acetate,side*.39,.09,.04).scale.set(.7,1.7,1);
+function opticalLens() {
+  const g=new T.ShapeGeometry(outline(true),40);
+  const p=g.attributes.position;
+  for(let i=0;i<p.count;i++) {
+    const x=p.getX(i),y=p.getY(i);p.setZ(i,.205-.095*Math.pow(x/2.8,2)+.025*y);
+  }
+  // Slight front curvature is visible in the softbox reflections.
+  g.computeVertexNormals();return g;
+}
+function templeGeometry(side) {
+  const curve=new T.CatmullRomCurve3([
+    new T.Vector3(side*2.72,.38,.12),new T.Vector3(side*2.76,.38,-.5),
+    new T.Vector3(side*2.72,.39,-1.6),new T.Vector3(side*2.61,.37,-2.8),
+    new T.Vector3(side*2.36,.22,-4.05),new T.Vector3(side*2.2,-.75,-4.57),
+    new T.Vector3(side*2.18,-.9,-4.62)
+  ]);
+  const positions=[],indices=[],rings=100,segments=20;
+  for(let i=0;i<=rings;i++) {
+    const t=i/rings,p=curve.getPointAt(t),tangent=curve.getTangentAt(t);
+    const horizontal=new T.Vector3(1,0,0),vertical=new T.Vector3().crossVectors(tangent,horizontal).normalize();
+    const taper=t<.62 ? 1 : 1-(t-.62)/.38*.62;
+    const cap=Math.min(1,Math.sin(Math.min(t*20,1)*Math.PI/2),Math.sin(Math.min((1-t)*30,1)*Math.PI/2));
+    for(let j=0;j<segments;j++) {
+      const angle=j/segments*Math.PI*2;
+      const v=p.clone().addScaledVector(horizontal,signedPow(Math.cos(angle),.5)*.105*taper*cap).addScaledVector(vertical,signedPow(Math.sin(angle),.5)*.19*taper*cap);
+      positions.push(v.x,v.y,v.z);
+    }
+  }
+  for(let i=0;i<rings;i++)for(let j=0;j<segments;j++) {
+    const a=i*segments+j,b=(i+1)*segments+j,c=(i+1)*segments+(j+1)%segments,d=i*segments+(j+1)%segments;indices.push(a,d,b,b,d,c);
+  }
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setIndex(indices);g.computeVertexNormals();return g;
+}
+for(const side of [-1,1]) {
+  mesh(side>0?'Right acetate front':'Left acetate front',frameGeometry(),acetate).scale.x=side;
+  mesh('Clear optical lens',opticalLens(),lens).scale.x=side;
+  mesh('Tapered smart temple',templeGeometry(side),acetate);
+  const hinge=mesh('Recessed hinge',new T.BoxGeometry(.1,.19,.14),silver,side*2.72,.36,.06);
+  const x=side*2.62,y=.445,z=.2-.095*Math.pow(x/2.8,2)+.025*y+.108;
+  mesh('Camera inset rim',new T.TorusGeometry(.067,.007,12,40),silver,x,y,z);
+  mesh('Camera lens',new T.CylinderGeometry(.059,.059,.012,40),camera,x,y,z-.002).rotation.x=Math.PI/2;
+  mesh('Optical coating',new T.CylinderGeometry(.027,.027,.013,32),reflection,x,y,z+.001).rotation.x=Math.PI/2;
+  mesh('Camera specular glint',new T.SphereGeometry(.007,12,8),silver,x-.014,y+.023,z+.012);
+  // Small hinge screw sits on the inside, never a manufacturer logo.
+  mesh('Hinge screw',new T.CylinderGeometry(.022,.022,.012,20),silver,side*2.7,.588,-.03);
+}
+const bridgeShape=new T.Shape();
+bridgeShape.moveTo(-.48,.5);bridgeShape.bezierCurveTo(-.27,.51,-.2,.45,0,.45);bridgeShape.bezierCurveTo(.2,.45,.27,.51,.48,.5);
+bridgeShape.lineTo(.45,.28);bridgeShape.bezierCurveTo(.2,.33,.13,.34,0,.34);bridgeShape.bezierCurveTo(-.13,.34,-.2,.33,-.45,.28);bridgeShape.closePath();
+const bridgeGeometry=new T.ExtrudeGeometry(bridgeShape,{depth:.1,bevelEnabled:true,bevelThickness:.035,bevelSize:.025,bevelSegments:8,curveSegments:24});
+mesh('Integrated saddle bridge',bridgeGeometry,acetate,0,0,.17);
+for(const side of [-1,1]) {
+  const pad=mesh('Integrated nose rest',new T.SphereGeometry(.095,24,16),acetate,side*.47,.06,.02);pad.scale.set(.7,1.9,1.2);pad.rotation.z=side*.3;
+}
 scene.updateMatrixWorld(true);
 const binary = await new GLTFExporter().parseAsync(scene,{binary:true});
 await fs.writeFile(path.join(destination,'wink-glasses.glb'),Buffer.from(binary));

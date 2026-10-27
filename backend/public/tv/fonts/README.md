@@ -1,0 +1,1 @@
+Manrope variable font, bundled locally from [Google Fonts](https://github.com/google/fonts/tree/main/ofl/manrope). Copyright 2019 The Manrope Project Authors. Licensed under the SIL Open Font License 1.1; see OFL.txt. No third-party font requests occur at runtime.

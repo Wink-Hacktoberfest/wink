@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0AA1C7F836860C0E430E0F7B /* Manrope-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 13BB0CBA992307E8D76BB169 /* Manrope-OFL.txt */; };
 		0B483A5BE66C41B1C5625EFB /* MediaPipeHandTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ECB91CCE4A5C486312A2DAB /* MediaPipeHandTracker.swift */; };
 		0E71BC355219166B02BC2E08 /* hand_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = 5BD37186DFDE5A340758982C /* hand_landmarker.task */; };
 		13AF48417FB83D4BEDFF320F /* IntentParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2037BA9D750D1F08FD270EA /* IntentParserTests.swift */; };
@@ -23,25 +24,26 @@
 		6ECDB34CCF6DDF5E433B8504 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8A932BCB17B26A6D4496217 /* ContentView.swift */; };
 		700F12EC4E6946A2DA18C8D4 /* GestureClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76FA9D26F5F14885A190C12F /* GestureClassifierTests.swift */; };
 		7716175068200949F40286F0 /* MWDATMockDevice in Frameworks */ = {isa = PBXBuildFile; productRef = 6FB7A737082AD01050AD8C66 /* MWDATMockDevice */; };
+		85F8839739D34E6ABD38B83B /* Manrope.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 15CDE2ED5688388AE66E510C /* Manrope.ttf */; };
 		8D925CD165E7DB6D0CDC98C7 /* GesturePipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5DFA5DF8C40D54294354B22 /* GesturePipeline.swift */; };
 		968375366587CDC5D6F812E0 /* IntentParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4F022D376F8756C5EDDD468 /* IntentParser.swift */; };
 		99DD1E4DB8ACF2FB7AF80F99 /* GestureClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99BC4623F3B4007606522746 /* GestureClassifier.swift */; };
-		9B205AD610B2D593EAC1C21F /* Pods_WinkTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C806CC877BFBB26AAEC1A9F5 /* Pods_WinkTests.framework */; };
 		9D0B29F5F035A74C19102015 /* WakePhrase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F48CAC95D17826D1374CAC7E /* WakePhrase.swift */; };
 		A1BC8F52F56814816515B12C /* WinkAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89182C1457B98407A8593F8A /* WinkAPIClient.swift */; };
 		AAE2505CAA5FB678CEB0D4FA /* GlassesFrameSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A308BC1571B587339AEB520C /* GlassesFrameSource.swift */; };
 		B0C162B37DEBA9A9052C2387 /* VisionHandTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61B7C090CD35318FAB4BE4D6 /* VisionHandTracker.swift */; };
 		B1E8B2F5AEC3983A8C75C7BD /* HandTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ED5E7767F55AF547B6368FF /* HandTracker.swift */; };
-		BE9741C301A3971375F51D4E /* Pods_Wink.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCFB6047FC4522AD43FB85E3 /* Pods_Wink.framework */; };
 		C1A2F4DB81D634DD453402FF /* WinkModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CCA80A06CDC85B4C2124539 /* WinkModels.swift */; };
 		C34D3B36A21675C65319CBDF /* MWDATCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0216A5B906E6076FD2AAEF88 /* MWDATCore */; };
 		C517DCDEEE8B62F2F3973CD6 /* LiveSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF44A036A975F39AD7F6B4FF /* LiveSocket.swift */; };
 		C6CD0DE22B8C3BC629F36BD6 /* FrameSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964CBA323B6FFE0FDA6F3F6B /* FrameSource.swift */; };
+		CB8F0B60D9DB0803C8BAA696 /* Pods_WinkTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0E550F67780ED3947AF48614 /* Pods_WinkTests.framework */; };
 		CBFCB54044BC1977DAAA5B8E /* WinkController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93C819401F3C813A19A1B825 /* WinkController.swift */; };
 		CEF2D57A8C830F16F59958CE /* ImageUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080A627D9AB685A8636C953D /* ImageUtils.swift */; };
 		D02FD52DBF66BFAB34AEC385 /* WinkApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBC6406DB860934579E94784 /* WinkApp.swift */; };
 		D3A2DAE61C792AA307671B08 /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58944FFBBF55A561F1867F02 /* AudioSessionManager.swift */; };
 		DB35A5131036D225BB535A20 /* WakeWordListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1042C25C19723A760D8CB060 /* WakeWordListener.swift */; };
+		DE617BCC58B5CF653740C0F3 /* Pods_Wink.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50880D70EF80CCBE6BBC369A /* Pods_Wink.framework */; };
 		EF1B61842CE40714A11AF033 /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBF4C62D26A3EBE9815F6FA0 /* PreviewView.swift */; };
 		F2D25C85D5DC8A25ED99C251 /* wink-glasses.dae in Resources */ = {isa = PBXBuildFile; fileRef = 2D394004BC89654E602F6DD9 /* wink-glasses.dae */; };
 /* End PBXBuildFile section */
@@ -58,15 +60,20 @@
 
 /* Begin PBXFileReference section */
 		080A627D9AB685A8636C953D /* ImageUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageUtils.swift; sourceTree = "<group>"; };
+		0E550F67780ED3947AF48614 /* Pods_WinkTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_WinkTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		1004F817BD6FC32E772F472D /* WhisperTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperTranscriber.swift; sourceTree = "<group>"; };
 		1042C25C19723A760D8CB060 /* WakeWordListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakeWordListener.swift; sourceTree = "<group>"; };
+		13BB0CBA992307E8D76BB169 /* Manrope-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Manrope-OFL.txt"; sourceTree = "<group>"; };
+		15CDE2ED5688388AE66E510C /* Manrope.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Manrope.ttf; sourceTree = "<group>"; };
 		15F8702344D65F128686B62D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2D394004BC89654E602F6DD9 /* wink-glasses.dae */ = {isa = PBXFileReference; lastKnownFileType = text.xml.dae; path = "wink-glasses.dae"; sourceTree = "<group>"; };
 		2D91489EDE2C707E281972C2 /* WinkTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WinkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3AA9FD4F36A32D568BFED8E1 /* Wink.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wink.entitlements; sourceTree = "<group>"; };
 		3CCA80A06CDC85B4C2124539 /* WinkModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinkModels.swift; sourceTree = "<group>"; };
 		3ECB91CCE4A5C486312A2DAB /* MediaPipeHandTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPipeHandTracker.swift; sourceTree = "<group>"; };
-		40F0C84B69F59675C705260D /* Pods-WinkTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WinkTests.debug.xcconfig"; path = "Target Support Files/Pods-WinkTests/Pods-WinkTests.debug.xcconfig"; sourceTree = "<group>"; };
+		4078A6169D50EB78E1A8BFF8 /* Pods-WinkTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WinkTests.release.xcconfig"; path = "Target Support Files/Pods-WinkTests/Pods-WinkTests.release.xcconfig"; sourceTree = "<group>"; };
+		50880D70EF80CCBE6BBC369A /* Pods_Wink.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Wink.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		5710BF3ADA0744160C22DD5F /* Pods-WinkTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WinkTests.debug.xcconfig"; path = "Target Support Files/Pods-WinkTests/Pods-WinkTests.debug.xcconfig"; sourceTree = "<group>"; };
 		58944FFBBF55A561F1867F02 /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionManager.swift; sourceTree = "<group>"; };
 		5BD37186DFDE5A340758982C /* hand_landmarker.task */ = {isa = PBXFileReference; path = hand_landmarker.task; sourceTree = "<group>"; };
 		5D5D35445F088EF07CEBE8DA /* Wink.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Wink.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -77,7 +84,6 @@
 		8B1623A8C533F000C262522E /* UtteranceSegmenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UtteranceSegmenter.swift; sourceTree = "<group>"; };
 		8ED5E7767F55AF547B6368FF /* HandTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTracker.swift; sourceTree = "<group>"; };
 		8F46BBBE129A2F95F4201112 /* SpeechOut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechOut.swift; sourceTree = "<group>"; };
-		91853982F7586C38D26FB948 /* Pods-Wink.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Wink.debug.xcconfig"; path = "Target Support Files/Pods-Wink/Pods-Wink.debug.xcconfig"; sourceTree = "<group>"; };
 		93C819401F3C813A19A1B825 /* WinkController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinkController.swift; sourceTree = "<group>"; };
 		964CBA323B6FFE0FDA6F3F6B /* FrameSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameSource.swift; sourceTree = "<group>"; };
 		98E6863B1EDF9565D4C358DE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -88,15 +94,13 @@
 		BBC6406DB860934579E94784 /* WinkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinkApp.swift; sourceTree = "<group>"; };
 		BBF4C62D26A3EBE9815F6FA0 /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
 		BEEA0C9404944334D693A549 /* PhoneFrameSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneFrameSource.swift; sourceTree = "<group>"; };
-		C806CC877BFBB26AAEC1A9F5 /* Pods_WinkTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_WinkTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		CCFB6047FC4522AD43FB85E3 /* Pods_Wink.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Wink.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2F4FD5DD75BC16A1FA1F2C6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		D36BF91F3764997EF9294E5B /* Pods-Wink.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Wink.release.xcconfig"; path = "Target Support Files/Pods-Wink/Pods-Wink.release.xcconfig"; sourceTree = "<group>"; };
 		D4F022D376F8756C5EDDD468 /* IntentParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentParser.swift; sourceTree = "<group>"; };
 		D5DFA5DF8C40D54294354B22 /* GesturePipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GesturePipeline.swift; sourceTree = "<group>"; };
+		DC315AE31AAEE9792005060F /* Pods-Wink.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Wink.debug.xcconfig"; path = "Target Support Files/Pods-Wink/Pods-Wink.debug.xcconfig"; sourceTree = "<group>"; };
 		E38BDF618306E375340B190B /* LocationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationProvider.swift; sourceTree = "<group>"; };
+		E3E1E96E843775B52C350D04 /* Pods-Wink.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Wink.release.xcconfig"; path = "Target Support Files/Pods-Wink/Pods-Wink.release.xcconfig"; sourceTree = "<group>"; };
 		E8A932BCB17B26A6D4496217 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		ED3ACE96BBA2A823A442BD1A /* Pods-WinkTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WinkTests.release.xcconfig"; path = "Target Support Files/Pods-WinkTests/Pods-WinkTests.release.xcconfig"; sourceTree = "<group>"; };
 		F48CAC95D17826D1374CAC7E /* WakePhrase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WakePhrase.swift; sourceTree = "<group>"; };
 		FF44A036A975F39AD7F6B4FF /* LiveSocket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveSocket.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -110,15 +114,15 @@
 				C34D3B36A21675C65319CBDF /* MWDATCore in Frameworks */,
 				6E6B21E26D51D80A1F3D46B3 /* MWDATCamera in Frameworks */,
 				7716175068200949F40286F0 /* MWDATMockDevice in Frameworks */,
-				BE9741C301A3971375F51D4E /* Pods_Wink.framework in Frameworks */,
+				DE617BCC58B5CF653740C0F3 /* Pods_Wink.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		4DFC60CC56D28E6CD9300E53 /* Frameworks */ = {
+		768BDDCC4F28DDD632757AAA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9B205AD610B2D593EAC1C21F /* Pods_WinkTests.framework in Frameworks */,
+				CB8F0B60D9DB0803C8BAA696 /* Pods_WinkTests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -165,15 +169,6 @@
 			path = Gestures;
 			sourceTree = "<group>";
 		};
-		0EFAA01CB8CCD64EA8377A23 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				CCFB6047FC4522AD43FB85E3 /* Pods_Wink.framework */,
-				C806CC877BFBB26AAEC1A9F5 /* Pods_WinkTests.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 		3193B45CD2CA4F1F8B405D4F = {
 			isa = PBXGroup;
 			children = (
@@ -181,8 +176,8 @@
 				70FB9AC37224264EB95E3F59 /* Wink */,
 				D8DA31506748F58CE73D8E83 /* WinkTests */,
 				019B819ADFECC653225B48E4 /* Products */,
-				3AB18813EDEE3D28BE6F3C3F /* Pods */,
-				0EFAA01CB8CCD64EA8377A23 /* Frameworks */,
+				AEE0DE631C9D136C6769223F /* Pods */,
+				B4241B2661874E2E6D75C4C3 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -196,23 +191,13 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
-		3AB18813EDEE3D28BE6F3C3F /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				91853982F7586C38D26FB948 /* Pods-Wink.debug.xcconfig */,
-				D36BF91F3764997EF9294E5B /* Pods-Wink.release.xcconfig */,
-				40F0C84B69F59675C705260D /* Pods-WinkTests.debug.xcconfig */,
-				ED3ACE96BBA2A823A442BD1A /* Pods-WinkTests.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		5BE5B24E05312EC6586EBDC8 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 				15F8702344D65F128686B62D /* Assets.xcassets */,
 				5BD37186DFDE5A340758982C /* hand_landmarker.task */,
+				13BB0CBA992307E8D76BB169 /* Manrope-OFL.txt */,
+				15CDE2ED5688388AE66E510C /* Manrope.ttf */,
 				2D394004BC89654E602F6DD9 /* wink-glasses.dae */,
 			);
 			path = Resources;
@@ -239,6 +224,27 @@
 				7A961D7DD5E7C0477D7C69EC /* Wink.xcconfig */,
 			);
 			path = Config;
+			sourceTree = "<group>";
+		};
+		AEE0DE631C9D136C6769223F /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				DC315AE31AAEE9792005060F /* Pods-Wink.debug.xcconfig */,
+				E3E1E96E843775B52C350D04 /* Pods-Wink.release.xcconfig */,
+				5710BF3ADA0744160C22DD5F /* Pods-WinkTests.debug.xcconfig */,
+				4078A6169D50EB78E1A8BFF8 /* Pods-WinkTests.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		B4241B2661874E2E6D75C4C3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				50880D70EF80CCBE6BBC369A /* Pods_Wink.framework */,
+				0E550F67780ED3947AF48614 /* Pods_WinkTests.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		C373140BA06EEDBFCCF57003 /* Services */ = {
@@ -293,9 +299,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 31E1AF5120AD4224C92DE2B9 /* Build configuration list for PBXNativeTarget "WinkTests" */;
 			buildPhases = (
-				0857B740CE4D6452277DD47B /* [CP] Check Pods Manifest.lock */,
+				E8062D798BC18785191BD3BB /* [CP] Check Pods Manifest.lock */,
 				F07471BA3B9A3033037033FE /* Sources */,
-				4DFC60CC56D28E6CD9300E53 /* Frameworks */,
+				768BDDCC4F28DDD632757AAA /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -311,7 +317,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7324E7A8D186E03BA8ECFC69 /* Build configuration list for PBXNativeTarget "Wink" */;
 			buildPhases = (
-				B40440C3D4CC955A43A61203 /* [CP] Check Pods Manifest.lock */,
+				A285C385B130D11A1FDF5B55 /* [CP] Check Pods Manifest.lock */,
 				36848C59F61BA62699E415AB /* Sources */,
 				C681C5F77A84B631E00D86A2 /* Resources */,
 				33ECD79F4D1B702EA23F6F9C /* Frameworks */,
@@ -380,6 +386,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				49ED13D3CE0C56284D982A58 /* Assets.xcassets in Resources */,
+				0AA1C7F836860C0E430E0F7B /* Manrope-OFL.txt in Resources */,
+				85F8839739D34E6ABD38B83B /* Manrope.ttf in Resources */,
 				0E71BC355219166B02BC2E08 /* hand_landmarker.task in Resources */,
 				F2D25C85D5DC8A25ED99C251 /* wink-glasses.dae in Resources */,
 			);
@@ -388,29 +396,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		0857B740CE4D6452277DD47B /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-WinkTests-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		B40440C3D4CC955A43A61203 /* [CP] Check Pods Manifest.lock */ = {
+		A285C385B130D11A1FDF5B55 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -426,6 +412,28 @@
 			);
 			outputPaths = (
 				"$(DERIVED_FILE_DIR)/Pods-Wink-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		E8062D798BC18785191BD3BB /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-WinkTests-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -490,7 +498,7 @@
 /* Begin XCBuildConfiguration section */
 		07422112E1FD71648A07FA2D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 40F0C84B69F59675C705260D /* Pods-WinkTests.debug.xcconfig */;
+			baseConfigurationReference = 5710BF3ADA0744160C22DD5F /* Pods-WinkTests.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GENERATE_INFOPLIST_FILE = YES;
@@ -508,7 +516,7 @@
 		};
 		3570762EB7A22F3B4295EDFB /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = ED3ACE96BBA2A823A442BD1A /* Pods-WinkTests.release.xcconfig */;
+			baseConfigurationReference = 4078A6169D50EB78E1A8BFF8 /* Pods-WinkTests.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GENERATE_INFOPLIST_FILE = YES;
@@ -526,7 +534,7 @@
 		};
 		62C91E46B7D61D57430519DD /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 91853982F7586C38D26FB948 /* Pods-Wink.debug.xcconfig */;
+			baseConfigurationReference = DC315AE31AAEE9792005060F /* Pods-Wink.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -683,7 +691,7 @@
 		};
 		FBF39FDD82E7D6FE5A345D70 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D36BF91F3764997EF9294E5B /* Pods-Wink.release.xcconfig */;
+			baseConfigurationReference = E3E1E96E843775B52C350D04 /* Pods-Wink.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

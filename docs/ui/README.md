@@ -1,6 +1,8 @@
 # PR4: Wink UI redesign
 
-The TV dashboard and native iOS app share a soft off-white palette, rounded cards, black navigation dock, and an original smart-glasses model inspired by the supplied Wayfarer reference. The screens keep Wink’s memory, capture, and recall workflows.
+The TV dashboard and native iOS app share a soft off-white palette, bundled Manrope typography, layered rounded cards, black navigation dock, and an original smart-glasses model inspired by the supplied Wayfarer reference. The screens keep Wink’s memory, capture, and recall workflows.
+
+The refinement adds continuous curved acetate geometry, proportional camera details, physically based materials, clear lenses and soft studio lighting. Native glasses can be rotated by dragging horizontally; automatic movement is a restrained three-quarter sway. Tab and detail transitions respect reduced motion. The local MOCK preview now uses [generated photographic sample memories](demo-assets.md), with cache-versioned URLs so old SVG placeholders disappear after refresh.
 
 ## Behavior
 
@@ -10,7 +12,7 @@ The TV dashboard and native iOS app share a soft off-white palette, rounded card
 
 ## Validation
 
-- `cd backend && npm run check`: typecheck + 72 tests passed, including 12 TV tests.
+- `cd backend && npm run check`: typecheck + 74 tests passed, including 12 TV tests.
 - `npm run build`: Worker production bundle dry run passed; no deployment.
 - `WINK_BASE_URL=http://127.0.0.1:8788 npm run smoke`: local MOCK HTTP/WebSocket save/list/image/ask/nearby/delete and privacy-related relay checks passed.
 - `npm run build:glasses`: model and local viewer generation passed.
