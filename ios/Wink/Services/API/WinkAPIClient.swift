@@ -66,6 +66,11 @@ nonisolated struct WinkAPIClient: Sendable {
         _ = try await sendRaw(request(path: "/v1/memories/\(id)", method: "DELETE"))
     }
 
+    /// `POST /v1/speak` → MP3 of a reply in the backend's voice (Aura-2 or ElevenLabs).
+    func speak(_ text: String) async throws -> Data {
+        try await sendRaw(request(path: "/v1/speak", method: "POST", json: ["text": text]))
+    }
+
     /// `POST /v1/events` with a `status`, `transcript` or `gesture` event.
     func postEvent(_ event: LiveEvent) async throws {
         _ = try await sendRaw(request(path: "/v1/events", method: "POST", json: event))
