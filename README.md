@@ -1,0 +1,47 @@
+# Wink
+
+**"Hey Wink, save this."** Smart-glasses memory you control with your voice and your hands.
+
+Wink runs on Meta Ray-Ban glasses and an iPhone. Say "Hey Wink, save this" and it remembers what you're looking at. Point at one object to save just that, or frame something with both hands. Later, ask "Hey Wink, what was that book?" and hear the answer in your ear, with the exact moment shown on your phone and on the big screen. Ask "where can I get this nearby?" and Wink finds real places from Overture Maps in Snowflake.
+
+Built in 5 hours at the Hacktoberfest 2026 mini hackathon (Hacklahoma) by Arboy and Messi.
+
+## How it works
+
+```
+Glasses camera + mic ─► iPhone: WhisperKit ("Hey Wink") + MediaPipe Hands (gestures) + crop
+                     ─► Cloudflare Worker ─► R2 (images) · Durable Object (live TV feed)
+                                         ─► DigitalOcean: open vision model + gpt-oss-120b
+                                         ─► Snowflake: memory vectors (Arctic Embed) + Overture Maps Places
+                     ◄─ spoken answer in the glasses
+```
+
+## Open-source AI inside
+
+| What | Model | Where it runs |
+|---|---|---|
+| Wake word and voice commands | Whisper (`base.en`) via WhisperKit | on the iPhone |
+| Hand gestures | MediaPipe Hand Landmarker | on the iPhone |
+| Understanding what you saved | open-weight vision model | DigitalOcean Gradient |
+| Answers and spoken replies | gpt-oss-120b | DigitalOcean Gradient |
+| Memory search | Snowflake Arctic Embed L v2.0 | Snowflake Cortex |
+
+## Snowflake
+
+- **Dataset:** Overture Maps Places, the free CARTO listing on the Snowflake Marketplace.
+- **How CoCo helped:** see `snowflake/README.md` and the screenshots in `docs/coco/`.
+
+## Repo
+
+- `ios/`: SwiftUI iPhone app for the glasses. Setup in `ios/README.md`.
+- `backend/`: Cloudflare Worker API, live WebSocket hub and TV dashboard. Setup in `backend/README.md`.
+- `snowflake/`: setup SQL, Overture exploration, app queries.
+- `docs/api.md`: the API contract. `PRD.md`: product spec. `demo/DEMO.md`: demo script.
+
+## Privacy
+
+Wink only captures when you ask, by voice or gesture. Memories live in your own Snowflake account and R2 bucket, and "Hey Wink, forget that" deletes one. Every model is open-weight, so the whole stack can be self-hosted.
+
+## License
+
+MIT. See `LICENSE`.

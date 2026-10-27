@@ -1,0 +1,38 @@
+# macOS
+.DS_Store
+
+# Xcode
+xcuserdata/
+DerivedData/
+build/
+*.xcscmblueprint
+*.xccheckout
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Swift Package Manager
+.build/
+
+# CocoaPods
+ios/Pods/
+
+# iOS secrets
+ios/Config/Secrets.xcconfig
+
+# Cloudflare backend
+node_modules/
+.wrangler/
+backend/dist/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Agent scratch
+.agent/

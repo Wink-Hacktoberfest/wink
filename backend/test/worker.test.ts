@@ -1,0 +1,172 @@
+import assert from 'node:assert/strict';
+import { afterEach, mock, test } from 'node:test';
+import worker, { LiveRoom } from '../src/index.ts';
+import type { Env, LiveEvent } from '../src/types.ts';
+
+const ORIGIN = 'https://wink-api.example';
+const TOKEN = 'test-wink-token';
+
+function environment(overrides: Partial<Env> = {}) {
+  const sent: LiveEvent[] = [];
+  const store = new Map<string, unknown>();
+  const images = new Map<string, Uint8Array>();
+  const ctx = {
+    storage: {
+      async get(key: string) { return structuredClone(store.get(key)); },
+      async put(key: string, value: unknown) { store.set(key, structuredClone(value)); },
+    },
+    acceptWebSocket() {},
+    getWebSockets: () => [{ send: (m: string) => sent.push(JSON.parse(m)) }],
+    getTags: () => ['tv'],
+    setWebSocketAutoResponse() {},
+  };
+  const room = new LiveRoom(ctx as never, {} as Env);
+  const env = {
+    MOCK: 'true',
+    WINK_TOKEN: TOKEN,
+    IMAGES: {
+      async get(key: string) {
+        const bytes = images.get(key);
+        return bytes ? { body: new Blob([bytes as Uint8Array<ArrayBuffer>]).stream(), httpEtag: '"e"', httpMetadata: { contentType: 'image/jpeg' } } : null;
+      },
+      async put(key: string, value: Uint8Array) { images.set(key, value); },
+      async delete(key: string) { images.delete(key); },
+    },
+    LIVE: {
+      idFromName: (name: string) => ({ toString: () => name }),
+      get: () => ({ fetch: (input: Request | string, init?: RequestInit) => room.fetch(new Request(input, init)) }),
+    },
+    ...overrides,
+  } as unknown as Env;
+  return { env, sent, images };
+}
+
+function call(env: Env, method: string, path: string, body?: unknown, token: string | null = TOKEN) {
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let payload: BodyInit | undefined;
+  if (body instanceof FormData) payload = body;
+  else if (body !== undefined) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
+  return worker.fetch(new Request(`${ORIGIN}${path}`, { method, headers, body: payload }), env);
+}
+
+function upload(meta: Record<string, unknown>) {
+  const form = new FormData();
+  form.set('image', new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' }), 'frame.jpg');
+  form.set('meta', JSON.stringify(meta));
+  return form;
+}
+
+afterEach(() => mock.restoreAll());
+
+function noNetwork() {
+  return mock.method(globalThis, 'fetch', async () => { throw new Error('MOCK mode must not call providers.'); });
+}
+
+test('health is public and reports models', async () => {
+  const { env } = environment();
+  const response = await call(env, 'GET', '/v1/health', undefined, null);
+  assert.equal(response.status, 200);
+  const body = await response.json() as { ok: boolean; mock: boolean; models: Record<string, string> };
+  assert.equal(body.ok, true);
+  assert.equal(body.mock, true);
+  assert.equal(body.models.chat, 'openai-gpt-oss-120b');
+  assert.equal(response.headers.get('access-control-allow-origin'), '*');
+});
+
+test('auth: wrong or missing token gets the contract error shape', async () => {
+  const { env } = environment();
+  for (const token of [null, 'nope']) {
+    const response = await call(env, 'GET', '/v1/memories', undefined, token);
+    assert.equal(response.status, 401);
+    const body = await response.json() as { error: { code: string; message: string } };
+    assert.equal(body.error.code, 'unauthorized');
+    assert.ok(body.error.message);
+  }
+  const notFound = await call(env, 'GET', '/v1/nope');
+  assert.equal(notFound.status, 404);
+  assert.equal(((await notFound.json()) as { error: { code: string } }).error.code, 'not_found');
+});
+
+test('real mode without a token fails closed', async () => {
+  const { env } = environment({ MOCK: 'false', WINK_TOKEN: '' });
+  const response = await call(env, 'GET', '/v1/memories', undefined, null);
+  assert.equal(response.status, 503);
+});
+
+test('mock: save → list → ask → nearby → delete, broadcasting each step', async () => {
+  const provider = noNetwork();
+  const { env, sent, images } = environment();
+
+  const saved = await call(env, 'POST', '/v1/memories', upload({
+    utterance: "hey wink save this it's the wine sam liked", note: 'the wine sam liked',
+    selection: { mode: 'point', box: { x: 0.31, y: 0.18, w: 0.35, h: 0.4 } }, kind: 'explicit', source: 'glasses',
+    capturedAt: new Date().toISOString(), location: { lat: 35.2, lng: -97.44 },
+  }));
+  assert.equal(saved.status, 201);
+  const { memory, speech } = await saved.json() as { memory: Record<string, any>; speech: string };
+  assert.equal(memory.title, '2019 Malbec, Mendoza');
+  assert.equal(memory.note, 'the wine sam liked');
+  assert.match(memory.imageUrl, /^https:\/\/wink-api\.example\/v1\/images\/.+\.jpg$/);
+  assert.equal(memory.imageKey, undefined);
+  assert.deepEqual(memory.selection, { mode: 'point', box: { x: 0.31, y: 0.18, w: 0.35, h: 0.4 } });
+  assert.equal(speech, 'Saved. 2019 Malbec, Mendoza. The wine sam liked.');
+  assert.equal(sent.at(-1)?.type, 'memory.saved');
+  assert.equal(images.size, 1);
+
+  const img = await call(env, 'GET', new URL(memory.imageUrl).pathname, undefined, null);
+  assert.equal(img.status, 200);
+  assert.equal(img.headers.get('content-type'), 'image/jpeg');
+
+  const list = await (await call(env, 'GET', '/v1/memories?limit=50')).json() as { memories: Array<{ id: string }> };
+  assert.equal(list.memories[0]?.id, memory.id);
+  assert.ok(list.memories.length >= 2);
+
+  const answer = await (await call(env, 'POST', '/v1/ask', { question: 'what was that wine?', location: null })).json() as { speech: string; memories: Array<{ id: string }> };
+  assert.equal(answer.memories[0]?.id, memory.id);
+  assert.match(answer.speech, /Malbec/);
+  assert.equal(sent.at(-1)?.type, 'answer');
+
+  const none = await (await call(env, 'POST', '/v1/ask', { question: 'where is my passport?', location: null })).json() as { speech: string; memories: unknown[] };
+  assert.equal(none.memories.length, 0);
+  assert.match(none.speech, /don't have a memory/);
+
+  const near = await (await call(env, 'POST', '/v1/nearby', { memoryId: memory.id, query: null, location: { lat: 35.2, lng: -97.44 } })).json() as { speech: string; places: Array<{ distanceMeters: number }> };
+  assert.equal(near.places.length, 3);
+  assert.match(near.speech, /^Three wine shops nearby\. The closest is .+, 400 meters away\.$/);
+  assert.equal(sent.at(-1)?.type, 'nearby');
+
+  const deleted = await call(env, 'DELETE', `/v1/memories/${memory.id}`);
+  assert.equal(deleted.status, 204);
+  assert.deepEqual(sent.at(-1), { type: 'memory.deleted', id: memory.id });
+  assert.equal(images.size, 0);
+  const after = await (await call(env, 'GET', '/v1/memories')).json() as { memories: Array<{ id: string }> };
+  assert.ok(!after.memories.some((m) => m.id === memory.id));
+
+  assert.equal(provider.mock.callCount(), 0);
+});
+
+test('mock glance and events relay', async () => {
+  noNetwork();
+  const { env, sent } = environment();
+  const glance = await call(env, 'POST', '/v1/glance', upload({ utterance: "what's this book?", location: null }));
+  assert.equal(glance.status, 200);
+  const body = await glance.json() as { speech: string; title: string; objects: string[] };
+  assert.equal(body.title, 'Project Hail Mary');
+  assert.ok(body.speech.split(' ').length <= 25);
+
+  const ok = await call(env, 'POST', '/v1/events', { type: 'gesture', gesture: 'pinch', value: 1 });
+  assert.equal(ok.status, 202);
+  assert.deepEqual(sent.at(-1), { type: 'gesture', gesture: 'pinch', value: 1 });
+  const bad = await call(env, 'POST', '/v1/events', { type: 'memory.deleted', id: 'x' });
+  assert.equal(bad.status, 400);
+});
+
+test('upload without an image is a 400', async () => {
+  const { env } = environment();
+  const form = new FormData();
+  form.set('meta', '{}');
+  const response = await call(env, 'POST', '/v1/memories', form);
+  assert.equal(response.status, 400);
+  assert.equal(((await response.json()) as { error: { code: string } }).error.code, 'missing_image');
+});

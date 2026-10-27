@@ -1,0 +1,8 @@
+# Copy to .dev.vars (ignored by git). Deployed: `npx wrangler secret put <NAME>` for each.
+# Shared bearer token for the iOS app and the TV page. Generate one: openssl rand -hex 24
+# In MOCK mode with WINK_TOKEN empty, auth is skipped so everything works with zero setup.
+WINK_TOKEN=
+# DigitalOcean Gradient serverless inference "model access key".
+DO_MODEL_ACCESS_KEY=
+# Snowflake programmatic access token (PAT) for the Wink service user. See ../snowflake/README.md.
+SNOWFLAKE_PAT=
