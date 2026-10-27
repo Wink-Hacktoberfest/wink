@@ -17,7 +17,7 @@ CREATE SCHEMA IF NOT EXISTS WINK.APP;
 USE SCHEMA WINK.APP;
 
 -- 3. Memories. One row per "Hey Wink, save this".
---    embedding = SNOWFLAKE.CORTEX.EMBED_TEXT_1024('snowflake-arctic-embed-l-v2.0', title + summary + visible text + objects + note)
+--    embedding = AI_EMBED('snowflake-arctic-embed-l-v2.0', title + summary + visible text + objects + note)
 CREATE TABLE IF NOT EXISTS MEMORIES (
   id            STRING        NOT NULL PRIMARY KEY,  -- uuid from the Worker
   created_at    TIMESTAMP_TZ  NOT NULL DEFAULT CURRENT_TIMESTAMP(),
@@ -41,8 +41,8 @@ ALTER TABLE MEMORIES ADD COLUMN IF NOT EXISTS product_query STRING;
 
 -- Sanity check that Cortex embeddings work in this region/account (should return zero).
 SELECT VECTOR_L2_DISTANCE(
-  SNOWFLAKE.CORTEX.EMBED_TEXT_1024('snowflake-arctic-embed-l-v2.0', 'hello'),
-  SNOWFLAKE.CORTEX.EMBED_TEXT_1024('snowflake-arctic-embed-l-v2.0', 'hello')) AS should_be_zero;
+  AI_EMBED('snowflake-arctic-embed-l-v2.0', 'hello'),
+  AI_EMBED('snowflake-arctic-embed-l-v2.0', 'hello')) AS should_be_zero;
 -- If Cortex isn't available in your region: ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
 
 -- 4. A role + service user for the Worker.
@@ -53,7 +53,7 @@ GRANT USAGE ON SCHEMA WINK.APP TO ROLE WINK_APP;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE WINK.APP.MEMORIES TO ROLE WINK_APP;
 GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE WINK_APP;
 -- Overture Places (after you "Get" the CARTO listing; the database name is whatever you chose, default below):
-GRANT IMPORTED PRIVILEGES ON DATABASE OVERTURE_MAPS__PLACES TO ROLE WINK_APP;
+GRANT IMPORTED PRIVILEGES ON DATABASE OVERTURE_MAPS_PLACES TO ROLE WINK_APP;
 
 CREATE USER IF NOT EXISTS WINK_SVC
   TYPE = SERVICE

@@ -32,8 +32,8 @@ Wink is an iOS app paired with Meta Ray-Ban glasses:
 |---|---|---|
 | Best Open-Source AI (main) | Open-source/open-weight AI is central; public GitHub repo with an OSS license | gpt-oss-120b (reasoning), open vision model, Whisper via WhisperKit (wake word + speech), MediaPipe Hands (gestures), Arctic Embed (memory vectors). MIT license. |
 | Best Open-Source AI with Snowflake | CoCo + a free Snowflake dataset + open AI | Free dataset: **Overture Maps Places** (CARTO, Snowflake Marketplace). CoCo explores its nested schema, writes the nearby query, and designs the memory table and vector search. Screenshots go in `docs/coco/`. |
-| Best Use of DigitalOcean | Open-weight AI is important to how it works | All vision and reasoning inference runs on DigitalOcean Gradient serverless inference (`openai-gpt-oss-120b` + a vision model). |
-| Best Use of Snowflake | AI features in a data application | A RAG memory assistant: memories stored as `VECTOR(FLOAT,1024)` with Cortex `EMBED_TEXT_1024`, searched with `VECTOR_COSINE_SIMILARITY`, and grounded in Overture Places. |
+| Best Open-Source AI (sponsored by DigitalOcean) | Open-weight AI is important to how it works | gpt-oss-120b (answers) and Mistral Small 3.1 (vision) on Cloudflare Workers AI, plus Whisper and MediaPipe on device. DigitalOcean inference needs a card on file, so `CHAT_PROVIDER`/`VISION_PROVIDER` can switch back to DigitalOcean with one setting if a key becomes available. |
+| Best Use of Snowflake | AI features in a data application | A RAG memory assistant: memories stored as `VECTOR(FLOAT,1024)` with Cortex `AI_EMBED`, searched with `VECTOR_COSINE_SIMILARITY`, and grounded in Overture Places. |
 
 **Demo must say out loud:** the dataset name (Overture Maps Places by CARTO), how CoCo helped (show the screenshots), and which models are open (gpt-oss, Whisper, MediaPipe, Arctic Embed).
 
@@ -54,7 +54,7 @@ Cloudflare Worker `wink-api` (backend/, Messi)  ── docs/api.md is the contra
   ├─ R2 `wink-images`: saved JPEGs
   ├─ Durable Object `LiveRoom`: WebSocket hub, relays glasses → TV, pushes results
   ├─ /tv: static big-screen dashboard (backend/public/tv)
-  ├─► DigitalOcean Gradient: vision model (what is it, visible text) + gpt-oss-120b (answers, speech)
+  ├─► Workers AI: Mistral Small 3.1 (what is it, visible text) + gpt-oss-120b (answers, speech)
   └─► Snowflake SQL API (PAT auth)
         ├─ WINK.APP.MEMORIES: memories + Arctic Embed vectors, cosine search
         └─ Overture Maps Places (CARTO listing): nearby places, business matching
@@ -65,7 +65,7 @@ Key decisions:
 - **The phone crops, the backend never re-crops.** Gesture selection boxes are applied on-device.
 - **No Cortex Search for live memory:** its refresh lag would hide a memory saved 30 seconds ago. We query the `VECTOR` column directly, so new rows are searchable immediately.
 - **Speech replies are short** (≤ 25 words) because they're spoken in the ear.
-- **Fallbacks:** phone camera instead of the glasses camera (same pipeline); push-to-talk instead of the wake word; Workers AI vision model if DigitalOcean has no vision model; Apple Vision hand pose if MediaPipe or CocoaPods blocks the build.
+- **Fallbacks:** phone camera instead of the glasses camera (same pipeline); push-to-talk instead of the wake word; DigitalOcean Gradient as an alternative provider (`CHAT_PROVIDER=digitalocean`); Apple Vision hand pose if MediaPipe or CocoaPods blocks the build.
 
 ## 5. Scope
 
@@ -74,7 +74,7 @@ Key decisions:
 2. "Hey Wink, what was …?" → spoken answer + matching image.
 3. Point-to-select and two-hand frame gestures; palm to pause.
 4. TV dashboard: live status/transcript, memory wall animating in, answer panel.
-5. Real backend: DigitalOcean vision + gpt-oss, Snowflake storage + vector search.
+5. Real backend: Workers AI vision + gpt-oss, Snowflake storage + vector search.
 
 ### Should ship (M3)
 6. "Where can I get this nearby?" via Overture Places.
@@ -128,7 +128,7 @@ Messi's work is code only; Arboy connects the accounts and deploys.
 
 ### Shared
 - [ ] S1 Stage the demo table (book, wine bottle or snack, sticky note with a fake Wi-Fi password, keys, mug).
-- [ ] S2 README, LICENSE, Devpost write-up (dataset, CoCo usage, open models, DigitalOcean usage).
+- [ ] S2 README, LICENSE, Devpost write-up (dataset, CoCo usage, open models).
 - [ ] S3 Backup demo video by 8:45.
 
 ## 8. Demo script (≈3 minutes): see `demo/DEMO.md`
@@ -140,7 +140,7 @@ Messi's work is code only; Arboy connects the accounts and deploys.
 | Glasses camera and Bluetooth mic don't run together, or the stream drops | Check with Meta's sample app first; phone-camera toggle uses the same pipeline |
 | "Wink" misheard by Whisper | Fuzzy wake variants; push-to-talk button |
 | Venue Wi-Fi | Deployed Worker over a phone hotspot; backup video |
-| DigitalOcean has no vision model | `VISION_PROVIDER=workers-ai` with Llama 3.2 Vision (open weights) |
+| DigitalOcean requires a card | Workers AI runs the same open models (switched 19:55) |
 | Snowflake PAT blocked by network policy | Hackathon network policy allowing all IPs on the Wink service user |
 | Gesture false positives | Hold timers + cooldowns + earcon feedback; palm pause |
 | Judge wears prescription glasses | A teammate wears Wink and the judge directs what to look at and gestures in view |

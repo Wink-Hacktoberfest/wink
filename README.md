@@ -11,7 +11,7 @@ Built in 5 hours at the Hacktoberfest 2026 mini hackathon (Hacklahoma) by Arboy 
 ```
 Glasses camera + mic ─► iPhone: WhisperKit ("Hey Wink") + MediaPipe Hands (gestures) + crop
                      ─► Cloudflare Worker ─► R2 (images) · Durable Object (live TV feed)
-                                         ─► DigitalOcean: open vision model + gpt-oss-120b
+                                         ─► Workers AI: Mistral Small 3.1 (vision) + gpt-oss-120b
                                          ─► Snowflake: memory vectors (Arctic Embed) + Overture Maps Places
                      ◄─ spoken answer in the glasses
 ```
@@ -22,8 +22,8 @@ Glasses camera + mic ─► iPhone: WhisperKit ("Hey Wink") + MediaPipe Hands (g
 |---|---|---|
 | Wake word and voice commands | Whisper (`base.en`) via WhisperKit | on the iPhone |
 | Hand gestures | MediaPipe Hand Landmarker | on the iPhone |
-| Understanding what you saved | open-weight vision model | DigitalOcean Gradient |
-| Answers and spoken replies | gpt-oss-120b | DigitalOcean Gradient |
+| Understanding what you saved | Mistral Small 3.1 (Apache-2.0) | Cloudflare Workers AI |
+| Answers and spoken replies | gpt-oss-120b (Apache-2.0) | Cloudflare Workers AI |
 | Memory search | Snowflake Arctic Embed L v2.0 | Snowflake Cortex |
 
 ## Snowflake

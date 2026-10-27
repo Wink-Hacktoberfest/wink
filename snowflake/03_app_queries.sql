@@ -14,7 +14,7 @@ INSERT INTO MEMORIES
   (id, created_at, kind, title, summary, visible_text, objects, note, image_key, selection, lat, lng, place, product_query, embedding)
 SELECT ?, TO_TIMESTAMP_TZ(?), ?, ?, ?, ?, PARSE_JSON(?), NULLIF(?, ''), ?, PARSE_JSON(?),
   TRY_TO_DOUBLE(NULLIF(?, '')), TRY_TO_DOUBLE(NULLIF(?, '')), PARSE_JSON(NULLIF(?, '')), NULLIF(?, ''),
-  SNOWFLAKE.CORTEX.EMBED_TEXT_1024(?, ?);
+  AI_EMBED('snowflake-arctic-embed-l-v2.0', ?);
 
 -- List newest first (GET /v1/memories). The limit is a validated integer interpolated by the Worker.
 SELECT id,
@@ -36,7 +36,7 @@ SELECT id,
   TO_VARCHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.FF3TZH:TZM') AS created_at,
   kind, title, summary, visible_text, TO_JSON(objects) AS objects, note, image_key,
   TO_JSON(selection) AS selection, lat, lng, TO_JSON(place) AS place, product_query,
-  VECTOR_COSINE_SIMILARITY(embedding, SNOWFLAKE.CORTEX.EMBED_TEXT_1024(?, ?)) AS score
+  VECTOR_COSINE_SIMILARITY(embedding, AI_EMBED('snowflake-arctic-embed-l-v2.0', ?)) AS score
 FROM MEMORIES
 WHERE embedding IS NOT NULL
 ORDER BY score DESC
@@ -59,7 +59,7 @@ SELECT ID AS id,
   ST_Y(GEOMETRY) AS lat,
   ST_X(GEOMETRY) AS lng,
   ST_DISTANCE(GEOMETRY, ST_MAKEPOINT(?::FLOAT, ?::FLOAT)) AS meters
-FROM OVERTURE_MAPS__PLACES.CARTO.PLACE
+FROM OVERTURE_MAPS_PLACES.CARTO.PLACE
 WHERE ST_DWITHIN(GEOMETRY, ST_MAKEPOINT(?::FLOAT, ?::FLOAT), ?::FLOAT)
   AND (ARRAY_CONTAINS(TAXONOMY:primary, PARSE_JSON(?)::ARRAY)
        OR REGEXP_LIKE(NAMES:primary::STRING, ?, 'i'))
@@ -79,7 +79,7 @@ SELECT ID AS id,
   ST_X(GEOMETRY) AS lng,
   ST_DISTANCE(GEOMETRY, ST_MAKEPOINT(?::FLOAT, ?::FLOAT)) AS meters,
   JAROWINKLER_SIMILARITY(LOWER(NAMES:primary::STRING), LOWER(?)) AS similarity
-FROM OVERTURE_MAPS__PLACES.CARTO.PLACE
+FROM OVERTURE_MAPS_PLACES.CARTO.PLACE
 WHERE ST_DWITHIN(GEOMETRY, ST_MAKEPOINT(?::FLOAT, ?::FLOAT), ?::FLOAT)
   AND JAROWINKLER_SIMILARITY(LOWER(NAMES:primary::STRING), LOWER(?)) >= 85
 ORDER BY similarity DESC, meters

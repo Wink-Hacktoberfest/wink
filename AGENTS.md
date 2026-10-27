@@ -18,7 +18,7 @@ Wink is smart-glasses memory for Meta Ray-Ban glasses: "Hey Wink, save this" cap
 
 If your task needs a change in the other person's folder, stop and write it down as a request in "Handoffs" below instead of editing their code.
 
-**Accounts belong to Arboy.** Arboy holds the Cloudflare, DigitalOcean and Snowflake accounts and connects them: secrets, R2 bucket, Marketplace listing, PAT, deploys. Messi's side is **code only**: build and test against `MOCK=true`, never run `wrangler login`, `wrangler deploy`, `wrangler secret put` or `wrangler r2 bucket create`, and don't create cloud resources. When something needs an account, write the exact steps in "Handoffs" for Arboy.
+**Accounts belong to Arboy.** Arboy holds the Cloudflare and Snowflake accounts and connects them: secrets, R2 bucket, Marketplace listing, PAT, deploys. Messi's side is **code only**: build and test against `MOCK=true`, never run `wrangler login`, `wrangler deploy`, `wrangler secret put` or `wrangler r2 bucket create`, and don't create cloud resources. When something needs an account, write the exact steps in "Handoffs" for Arboy.
 
 ## Repo layout
 
@@ -38,8 +38,8 @@ wink/
 - **Glasses:** Meta Wearables Device Access Toolkit (`facebook/meta-wearables-dat-ios`, SPM; `MWDATCore`, `MWDATCamera`). Camera stream ≤ 720p/30fps over Bluetooth. Mic and speakers go through normal Bluetooth audio (HFP). No access to "Hey Meta" and no drawing on the Display HUD.
 - **On-device AI (iOS):** WhisperKit (`argmaxinc/argmax-oss-swift`, exact 1.1.1, Whisper `base.en`) for the "Hey Wink" wake word and commands; MediaPipe Hand Landmarker (CocoaPods `MediaPipeTasksVision`, model `hand_landmarker.task`) for gestures; AVSpeechSynthesizer for replies.
 - **Backend:** Cloudflare Workers + Durable Objects (WebSocket Hibernation API) + R2 + static assets.
-- **Inference:** DigitalOcean Gradient serverless inference (`https://inference.do-ai.run/v1`, OpenAI-compatible): `openai-gpt-oss-120b` for answers and speech, `VISION_MODEL` for images (check `/v1/models`). Fallback vision: Workers AI `@cf/meta/llama-3.2-11b-vision-instruct`.
-- **Data:** Snowflake SQL API v2 with a programmatic access token. `WINK.APP.MEMORIES` holds memories with `VECTOR(FLOAT,1024)` from `SNOWFLAKE.CORTEX.EMBED_TEXT_1024('snowflake-arctic-embed-l-v2.0', …)`, searched with `VECTOR_COSINE_SIMILARITY`. The free dataset is **Overture Maps Places** (CARTO listing on the Snowflake Marketplace), table configured by `OVERTURE_PLACES_TABLE`.
+- **Inference:** Cloudflare Workers AI through the `AI` binding (no key needed): `@cf/openai/gpt-oss-120b` for answers and speech (`CHAT_PROVIDER=workers-ai`), `@cf/mistralai/mistral-small-3.1-24b-instruct` for images (`VISION_PROVIDER=workers-ai`). Both are verified live on Arboy's account and return OpenAI `chat.completion` objects; gpt-oss keeps its reasoning in a separate field. DigitalOcean Gradient (`https://inference.do-ai.run/v1`) remains supported by setting both providers to `digitalocean` + `DO_MODEL_ACCESS_KEY`, but DigitalOcean requires a card on file, so it is off. Fallback vision: Workers AI `@cf/meta/llama-3.2-11b-vision-instruct`.
+- **Data:** Snowflake SQL API v2 with a programmatic access token. `WINK.APP.MEMORIES` holds memories with `VECTOR(FLOAT,1024)` from `AI_EMBED('snowflake-arctic-embed-l-v2.0', …)`, searched with `VECTOR_COSINE_SIMILARITY`. The free dataset is **Overture Maps Places** (CARTO listing on the Snowflake Marketplace), table configured by `OVERTURE_PLACES_TABLE`.
 
 ## Running things
 
@@ -49,7 +49,7 @@ cd backend && npm ci && npm run check && npm run build
 npm run dev -- --ip 0.0.0.0     # phone on the same Wi-Fi uses http://<mac-lan-ip>:8787
 ```
 - `npm run dev` uses `wrangler.mock.jsonc` with `MOCK=true` and no remote AI binding, so iOS and the TV work with no keys or cloud account. `npm run dev:real` uses `wrangler.jsonc` for Arboy’s provider verification. `npm run smoke` checks a running MOCK server through HTTP + real WebSockets.
-- Secrets live only in ignored `.dev.vars` locally or `wrangler secret put` when deployed: `WINK_TOKEN`, `DO_MODEL_ACCESS_KEY`, `SNOWFLAKE_PAT`. Never commit keys.
+- Secrets live only in ignored `.dev.vars` locally or `wrangler secret put` when deployed: `WINK_TOKEN`, `SNOWFLAKE_PAT` (and `DO_MODEL_ACCESS_KEY` only if switching back to DigitalOcean). Never commit keys.
 - Workers' `fetch` rejects `redirect: 'error'`; use `redirect: 'manual'` for provider calls.
 - TV: open `/tv?token=<WINK_TOKEN>` on the projector laptop.
 - Backend-only changes don't need an iOS build.
@@ -109,20 +109,28 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 | A4 speech into glasses | Arboy | 🟡 | HFP routing untested on device |
 | A5 gestures + selection crop | Arboy | 🟡 | thresholds tuned on synthetic hands only; tune on real footage |
 | A6 live socket events / pointer | Arboy | ✅ | socket connects; flick only sends the event, TV decides what to delete |
-| A8 keys (DO, Snowflake PAT, R2, token) | Arboy | ⬜ | accounts are Arboy's |
+| A8 keys (Snowflake PAT, R2, token) | Arboy | ✅ | R2, WINK_TOKEN, Snowflake setup + PAT (WINK_SVC, 7-day) done |
 | M1 provider reliability | Messi | ✅ | bounded calls, final-only chat, Workers AI fallback; tested with stubbed providers |
 | M2 `/memories` real | Messi | ✅ | code + real-route transport tests; R2 cleanup and retryable deletion; live account check pending |
 | M3 `/ask` real | Messi | ✅ | vector retrieval + grounded chat/fallback; live provider check pending |
 | M4 LiveRoom relay | Messi | ✅ | validated events, rate caps, concurrent MOCK storage; local real-WebSocket smoke passes |
 | M5 TV dashboard | Messi | ✅ | Chrome verified; privacy pause, reconnect/resync, pointer, accessible memory details |
 | M6 `/nearby` on Overture | Messi | ✅ | code detects taxonomy/categories and validates geography; actual share/category check pending |
-| M7 deploy + MOCK off | Arboy | ⬜ | after M1 |
+| M7 deploy + MOCK off | Arboy | ✅ | https://wink-api.arboydev.workers.dev, real save/ask/nearby/delete verified |
 | M8 CoCo screenshots | Messi | ⬜ | checklist and 04_verify.sql ready; actual Arboy account session/evidence required |
 | Demo video + Devpost | Both | ⬜ | |
 
 ## Handoffs
 
 Newest first. Format: `HH:MM from → to: message`.
+
+- 20:10 Arboy → Messi: **deployed and live** at `https://wink-api.arboydev.workers.dev` with `MOCK=false` (TV at `/tv?token=…`). Snowflake fixes you should know about:
+  - The listing database is `OVERTURE_MAPS_PLACES` (one underscore); table `OVERTURE_MAPS_PLACES.CARTO.PLACE`, 81M rows.
+  - New accounts can't call `SNOWFLAKE.CORTEX.EMBED_TEXT_1024`; everything now uses `AI_EMBED` (same Arctic Embed model, `VECTOR(FLOAT,1024)`).
+  - `AI_EMBED` rejects a bound model argument, so `insertMemorySql(model)` / `searchMemoriesSql(model)` inline a regex-validated model id; only the text is bound.
+  - Verified for real: save (~8 s), ask (~4 s), nearby (5 real coffee shops, closest 255 m), delete.
+
+- 19:55 Arboy → Messi: DigitalOcean won't issue an inference key without a credit card, so the backend now defaults to Workers AI for both chat and vision (PR `arboy/workers-ai-models`). `CHAT_PROVIDER=workers-ai` runs `@cf/openai/gpt-oss-120b`; `VISION_PROVIDER=workers-ai` runs `@cf/mistralai/mistral-small-3.1-24b-instruct` (Apache-2.0, no license gate) with an `image_url` message. Llama 3.2 Vision still uses its prompt+image schema if selected. 64 tests pass; real `/v1/glance` verified end to end on Arboy's account (~8 s). The DigitalOcean path is untouched and returns with `CHAT_PROVIDER`/`VISION_PROVIDER=digitalocean`.
 
 - 19:20 Arboy → Messi: iOS app is in (PR from `arboy/ios-scaffold`). It sends `flick` gesture events only; the TV must pick the highlighted memory and call `DELETE`. "Forget that" is confirmed with a thumbs up before the app calls `DELETE`.
 - 19:13 Messi → Arboy: backend implementation is ready on `messi/backend-complete` locally. Typecheck + 61 tests + dry-run build pass; HTTP/WebSocket smoke confirms save → ask → nearby → delete and TV broadcasts. API contract unchanged; no iOS files edited. `npm run dev` now uses a local-only MOCK config (no Cloudflare account); `npm run smoke` tests the running server (`WINK_BASE_URL` overrides port). Use `npm run dev:real` for accounts configured in `wrangler.jsonc`.
@@ -142,13 +150,15 @@ Newest first. Format: `HH:MM from → to: message`.
 - 18:55 Arboy → Messi: contract v1 is in `docs/api.md`.
 
 ### Account setup checklist (Arboy)
-1. DigitalOcean: create a model access key; `curl https://inference.do-ai.run/v1/models -H "Authorization: Bearer $KEY"`; pick `VISION_MODEL`, confirm `openai-gpt-oss-120b`.
+1. ~~DigitalOcean key~~: replaced by Workers AI (DigitalOcean needs a card). ✅ Cloudflare login + `wink-images` bucket done.
 2. Snowflake: get "Overture Maps - Places" (CARTO) from the Marketplace, **then** run `snowflake/01_setup.sql` as ACCOUNTADMIN; copy the PAT (shown once); note the account URL.
 3. Cloudflare: `npx wrangler login`, `npx wrangler r2 bucket create wink-images`.
 4. Secrets: `WINK_TOKEN` (any long random string), `DO_MODEL_ACCESS_KEY`, `SNOWFLAKE_PAT` into `backend/.dev.vars` and `wrangler secret put`; set `SNOWFLAKE_ACCOUNT_URL` + `VISION_MODEL` in `wrangler.jsonc`.
 5. `npm run deploy`, set `"MOCK": "false"`, deploy again, check `/v1/health`.
 
 ## Decisions log
+
+- 19:55: inference moved to Cloudflare Workers AI (same gpt-oss-120b, Mistral Small 3.1 for vision) because DigitalOcean requires a card on file. The Best Open-Source AI prize only requires open-weight AI.
 
 - Memory search queries the `VECTOR` column directly, not Cortex Search, because Cortex Search's refresh lag would hide just-saved memories.
 - The demo build captures only on request (voice or gesture). Passive capture is on the cut list.

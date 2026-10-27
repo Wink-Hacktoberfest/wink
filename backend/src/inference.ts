@@ -4,12 +4,19 @@ import { VISION_SYSTEM, visionUserPrompt } from './prompts.ts';
 import type { Env, VisionResult } from './types.ts';
 
 const DO_CHAT_URL = 'https://inference.do-ai.run/v1/chat/completions';
-const WORKERS_VISION_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+const WORKERS_VISION_MODEL = '@cf/mistralai/mistral-small-3.1-24b-instruct';
+const WORKERS_CHAT_MODEL = '@cf/openai/gpt-oss-120b';
 
 type ContentPart = { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } };
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string | ContentPart[] };
 
+/** Same open-weight gpt-oss either way: DigitalOcean Gradient, or Workers AI when CHAT_PROVIDER=workers-ai. */
+export function chatProvider(env: Env): 'digitalocean' | 'workers-ai' {
+  return env.CHAT_PROVIDER?.trim().toLowerCase() === 'workers-ai' ? 'workers-ai' : 'digitalocean';
+}
+
 export function chatModel(env: Env): string {
+  if (chatProvider(env) === 'workers-ai') return env.WORKERS_AI_CHAT_MODEL?.trim() || WORKERS_CHAT_MODEL;
   return env.CHAT_MODEL?.trim() || 'openai-gpt-oss-120b';
 }
 
@@ -89,10 +96,50 @@ export async function doChat(env: Env, model: string, messages: ChatMessage[],
   return text;
 }
 
+/** Bound a Workers AI call; the binding has no timeout of its own. */
+async function runWorkersAi(env: Env, model: string, inputs: Record<string, unknown>, timeoutMs: number): Promise<unknown> {
+  if (!env.AI) throw new HttpError(503, 'not_configured', 'The Workers AI binding is missing.');
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      env.AI.run(model, inputs),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new HttpError(504, 'provider_timeout', 'Workers AI timed out.')), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** OpenAI-style chat on Workers AI; gpt-oss returns a chat.completion with reasoning kept separate. */
+export async function workersAiChat(env: Env, model: string, messages: ChatMessage[],
+  options: { maxTokens?: number; temperature?: number; reasoning?: boolean; timeoutMs?: number } = {}): Promise<string> {
+  const inputs: Record<string, unknown> = {
+    messages,
+    max_tokens: options.maxTokens ?? 700,
+    temperature: options.temperature ?? 0.3,
+  };
+  if (options.reasoning) inputs.reasoning = { effort: 'low' };
+  let result: unknown;
+  try {
+    result = await runWorkersAi(env, model, inputs, options.timeoutMs ?? 25_000);
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    console.error('Workers AI chat failed.');
+    throw new HttpError(502, 'provider_error', 'The model could not complete the request.');
+  }
+  const text = extractChatText(result) || (isRecord(result) && typeof result.response === 'string' ? result.response.trim() : '');
+  if (!text) throw new HttpError(502, 'provider_error', 'The model did not return a complete reply.');
+  return text;
+}
+
 /** Low effort keeps gpt-oss fast while leaving token space for its reasoning. */
 export function chat(env: Env, system: string, user: string, maxTokens = 700): Promise<string> {
-  return doChat(env, chatModel(env), [{ role: 'system', content: system }, { role: 'user', content: user }],
-    { maxTokens, temperature: 0.3, reasoning: true });
+  const messages: ChatMessage[] = [{ role: 'system', content: system }, { role: 'user', content: user }];
+  const options = { maxTokens, temperature: 0.3, reasoning: true };
+  if (chatProvider(env) === 'workers-ai') return workersAiChat(env, chatModel(env), messages, options);
+  return doChat(env, chatModel(env), messages, options);
 }
 
 /** Fail the request instead of storing provider errors, refusals, or broken JSON as a memory. */
@@ -105,18 +152,29 @@ function visionResult(raw: unknown): VisionResult {
   return parseVisionJson(obj);
 }
 
-async function workersAiVision(env: Env, model: string, image: Uint8Array, prompt: string): Promise<VisionResult> {
+function imageDataUrl(image: Uint8Array, contentType: string): string {
+  return `data:${contentType.startsWith('image/') ? contentType : 'image/jpeg'};base64,${bytesToBase64(image)}`;
+}
+
+async function workersAiVision(env: Env, model: string, image: Uint8Array, contentType: string,
+  prompt: string): Promise<VisionResult> {
   if (!env.AI) throw new HttpError(503, 'not_configured', 'The Workers AI binding is missing.');
-  // The image-input schema uses prompt + image, unlike the model's text-only chat schema.
-  const inputs = { prompt: `${VISION_SYSTEM}\n\n${prompt}`, image: Array.from(image), max_tokens: 700, temperature: 0.2 };
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  // Llama 3.2 Vision takes prompt + image bytes; chat models such as Mistral Small 3.1 take an image_url message.
+  const llamaSchema = model.includes('llama-3.2') && model.includes('vision');
+  const inputs = llamaSchema
+    ? { prompt: `${VISION_SYSTEM}\n\n${prompt}`, image: Array.from(image), max_tokens: 700, temperature: 0.2 }
+    : {
+      messages: [
+        { role: 'system', content: VISION_SYSTEM },
+        { role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageDataUrl(image, contentType) } }] },
+      ],
+      max_tokens: 700,
+      temperature: 0.2,
+    };
   try {
-    const result = await Promise.race([
-      env.AI.run(model, inputs),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new HttpError(504, 'provider_timeout', 'Workers AI vision timed out.')), 25_000);
-      }),
-    ]);
+    const result = await runWorkersAi(env, model, inputs, 25_000);
+    const chatText = extractChatText(result);
+    if (chatText) return visionResult(chatText);
     return visionResult(isRecord(result) && 'response' in result ? result.response : result);
   } catch (error) {
     if (error instanceof HttpError) throw error;
@@ -127,8 +185,6 @@ async function workersAiVision(env: Env, model: string, image: Uint8Array, promp
     }
     console.error('Workers AI vision failed.');
     throw new HttpError(502, 'provider_error', 'The vision model could not read the image.');
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -137,8 +193,8 @@ export async function describeImage(env: Env, image: Uint8Array, contentType: st
   hint: string | null): Promise<VisionResult> {
   const target = visionTarget(env);
   const prompt = visionUserPrompt(hint);
-  if (target.provider === 'workers-ai') return workersAiVision(env, target.model, image, prompt);
-  const dataUrl = `data:${contentType.startsWith('image/') ? contentType : 'image/jpeg'};base64,${bytesToBase64(image)}`;
+  if (target.provider === 'workers-ai') return workersAiVision(env, target.model, image, contentType, prompt);
+  const dataUrl = imageDataUrl(image, contentType);
   try {
     const text = await doChat(env, target.model, [
       { role: 'system', content: VISION_SYSTEM },
@@ -148,6 +204,6 @@ export async function describeImage(env: Env, image: Uint8Array, contentType: st
   } catch (error) {
     if (!env.AI) throw error;
     console.warn('DigitalOcean vision unavailable; using Workers AI.');
-    return workersAiVision(env, env.WORKERS_AI_VISION_MODEL?.trim() || WORKERS_VISION_MODEL, image, prompt);
+    return workersAiVision(env, env.WORKERS_AI_VISION_MODEL?.trim() || WORKERS_VISION_MODEL, image, contentType, prompt);
   }
 }
