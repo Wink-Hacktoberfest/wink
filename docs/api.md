@@ -90,6 +90,9 @@ Side effect: broadcasts `answer`.
 → `200 { "speech": string, "places": Place[] }`, nearest first, at most 5. Data comes from Overture Maps Places in Snowflake.
 Side effect: broadcasts `nearby`.
 
+### `POST /v1/speak`: the reply in a natural voice
+`{ "text": string }` → `200 audio/mpeg` (MP3). ElevenLabs when `ELEVENLABS_API_KEY` is set, otherwise Deepgram Aura-2 on Workers AI. Any error (including MOCK mode) means the phone uses its built-in voice.
+
 ### `GET /v1/memories?limit=50`
 → `200 { "memories": Memory[] }`, newest first.
 
@@ -126,3 +129,4 @@ The big-screen dashboard (static page served by the Worker). Open `/tv?token=<WI
 
 ## Changelog
 - v1 (2026-10-26 18:50): initial contract.
+- v1.1 (2026-10-26 20:30): `POST /v1/speak` (Arboy, additive).

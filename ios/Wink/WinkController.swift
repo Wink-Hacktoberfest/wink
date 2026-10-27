@@ -84,6 +84,12 @@ final class WinkController {
         guard !started else { return }
         started = true
 
+        // Natural voice from the backend (Aura-2 / ElevenLabs); the built-in voice covers any failure.
+        speech.audioProvider = { [weak self] text in
+            guard let api = self?.api else { return nil }
+            return try? await api.speak(text)
+        }
+
         glasses.observe()
         location.requestPermission()
 

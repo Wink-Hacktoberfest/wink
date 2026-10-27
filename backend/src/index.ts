@@ -7,6 +7,7 @@ import { glance } from './routes/glance.ts';
 import { createMemory, getMemories, removeMemory } from './routes/memories.ts';
 import { events, health, image } from './routes/misc.ts';
 import { nearby } from './routes/nearby.ts';
+import { speak } from './routes/speak.ts';
 import type { Env, ExecutionContext } from './types.ts';
 
 export { LiveRoom } from './live.ts';
@@ -37,6 +38,7 @@ const ROUTES: Route[] = [
   route('POST', '/v1/glance', glance),
   route('POST', '/v1/ask', ask),
   route('POST', '/v1/nearby', nearby),
+  route('POST', '/v1/speak', speak),
   route('POST', '/v1/events', events),
   route('GET', '/v1/images/:key', image, 'none'),
   route('GET', '/v1/live', live, 'query'),

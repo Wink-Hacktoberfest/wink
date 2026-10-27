@@ -1,3 +1,4 @@
+import { sampleImageAsset } from '../mock.ts';
 import type { Env, ExecutionContext, Memory, StoredMemory } from '../types.ts';
 
 export type RouteContext = {
@@ -9,7 +10,9 @@ export type RouteContext = {
 };
 
 export function imageUrl(origin: string, key: string): string {
-  return `${origin}/v1/images/${encodeURIComponent(key)}`;
+  // Version bundled samples so browsers retire the previously cached SVG artwork.
+  const version = sampleImageAsset(key) ? '?v=photo-1' : '';
+  return `${origin}/v1/images/${encodeURIComponent(key)}${version}`;
 }
 
 /** Strips storage-only fields and attaches the absolute image URL for this request's host. */

@@ -102,4 +102,8 @@ export interface Env {
   WINK_TOKEN?: string;
   DO_MODEL_ACCESS_KEY?: string;
   SNOWFLAKE_PAT?: string;
+  ELEVENLABS_API_KEY?: string;
+  ELEVENLABS_VOICE_ID?: string;
+  ELEVENLABS_MODEL?: string;
+  AURA_SPEAKER?: string;
 }

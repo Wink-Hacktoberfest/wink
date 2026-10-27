@@ -6,6 +6,11 @@ final class IntentParserTests: XCTestCase {
         XCTAssertEqual(IntentParser.parse("save this it's the wine sam liked"), .save(note: "the wine sam liked"))
         XCTAssertEqual(IntentParser.parse("Save this."), .save(note: nil))
         XCTAssertEqual(IntentParser.parse("remember this"), .save(note: nil))
+        XCTAssertEqual(IntentParser.parse("Can you save this?"), .save(note: nil))
+        XCTAssertEqual(IntentParser.parse("please save this, it's my keys"), .save(note: "my keys"))
+        XCTAssertEqual(IntentParser.parse("okay I need you to save this"), .save(note: nil))
+        XCTAssertEqual(IntentParser.parse("do you remember that book?"), .ask(question: "do you remember that book"))
+        XCTAssertEqual(IntentParser.parse("did I save this?"), .ask(question: "did I save this"))
     }
 
     func testGlanceAskNearby() {

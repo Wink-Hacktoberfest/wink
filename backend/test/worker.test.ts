@@ -94,6 +94,45 @@ test('real mode without a token fails closed', async () => {
   assert.equal(response.status, 503);
 });
 
+test('mock sample photographs use exact bundled paths without forwarding credentials', async () => {
+  const seen: Request[] = [];
+  const { env } = environment({ ASSETS: { fetch: async (request: Request) => {
+    seen.push(request);
+    return new Response('generated-photo', { headers: { 'Content-Type': 'image/webp' } });
+  } } as Env['ASSETS'] });
+  const listed = await (await call(env, 'GET', '/v1/memories')).json() as { memories: { imageUrl: string }[] };
+  assert.equal(listed.memories.length, 4);
+  for (const memory of listed.memories) {
+    assert.equal(new URL(memory.imageUrl).searchParams.get('v'), 'photo-1', 'Sample URLs must bypass cached legacy SVGs');
+  }
+  for (const name of ['wine', 'book', 'keys', 'coffee']) {
+    const response = await call(env, 'GET', '/v1/images/sample-' + name + '?token=do-not-forward');
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'image/webp');
+    assert.equal(await response.text(), 'generated-photo');
+    assert.equal(seen.at(-1)!.url, ORIGIN + '/tv/demo/' + name + '.webp');
+    assert.equal(seen.at(-1)!.headers.has('Authorization'), false);
+  }
+  assert.equal((await call(env, 'GET', '/v1/images/sample-unknown')).status, 404);
+  assert.equal((await call(env, 'GET', '/v1/images/constructor')).status, 404);
+  assert.equal(seen.length, 4);
+
+  env.MOCK = 'false';
+  const realSample = await call(env, 'GET', '/v1/images/sample-wine');
+  assert.equal(realSample.headers.get('content-type'), 'image/svg+xml');
+  assert.equal(seen.length, 4, 'Real mode retains its existing image behavior');
+});
+
+test('mock sample images retain SVG fallback when bundled photographs are unavailable', async () => {
+  for (const assets of [undefined, { fetch: async () => new Response('missing', { status: 404 }) }]) {
+    const { env } = environment({ ASSETS: assets as Env['ASSETS'] });
+    const response = await call(env, 'GET', '/v1/images/sample-book');
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'image/svg+xml');
+    assert.match(await response.text(), /Project Hail Mary/);
+  }
+});
+
 test('mock: save → list → ask → nearby → delete, broadcasting each step', async () => {
   const provider = noNetwork();
   const { env, sent, images } = environment();

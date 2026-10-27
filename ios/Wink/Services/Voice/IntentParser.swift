@@ -52,8 +52,31 @@ nonisolated enum IntentParser {
     private static let noteLeadIns = ["it's ", "its ", "it is ", "this is ", "that's ", "thats ", "that is ", "as ",
                                       "for ", "because ", "called ", "and ", "so ", "please "]
 
+    /// Polite or filler openers Whisper often keeps before the verb: "can you save this", "please remember that".
+    private static let saveOpeners = ["can you ", "could you ", "would you ", "will you ", "please ", "go ahead and ",
+                                      "i want to ", "i want you to ", "let's ", "lets ", "just ", "hey ", "okay ", "ok ", "uh ", "um "]
+
     /// Returns the note (possibly empty) if this is a save command.
-    static func saveNote(_ text: String) -> String? {
+    static func saveNote(_ input: String) -> String? {
+        var text = input
+        var stripped = true
+        while stripped {
+            stripped = false
+            for opener in saveOpeners where text.hasPrefix(opener) {
+                text = String(text.dropFirst(opener.count)).trimmingCharacters(in: .whitespaces)
+                stripped = true
+            }
+        }
+        // A multi-word save phrase anywhere still means save ("i really need you to save this").
+        // Questions ("did I save this?", "do you remember that book?") stay questions.
+        let questionStarts = ["what", "where", "when", "who", "which", "how", "did", "do", "does", "have", "is", "was", "can i"]
+        if !saveVerbs.contains(where: { text == $0 || text.hasPrefix($0 + " ") }),
+           !questionStarts.contains(where: { text == $0 || text.hasPrefix($0 + " ") }),
+           let verb = saveVerbs.filter({ $0.contains(" ") && !$0.hasPrefix("remember") })
+               .first(where: { (" " + text + " ").contains(" " + $0 + " ") }),
+           let range = text.range(of: verb) {
+            text = String(text[range.lowerBound...])
+        }
         for verb in saveVerbs.sorted(by: { $0.count > $1.count }) where text == verb || text.hasPrefix(verb + " ") {
             var rest = String(text.dropFirst(verb.count)).trimmingCharacters(in: .whitespaces)
             var changed = true
