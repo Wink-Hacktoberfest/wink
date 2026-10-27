@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Manrope";
+        src: url("assets/Manrope.ttf") format("truetype");
+        font-weight: 200 800;
+      }
+      :root {
+        --ground: #f2f1ee;
+        --card: #fbfbfa;
+        --ink: #111111;
+        --muted: #6d6d6a;
+        --line: #e4e3df;
+        --accent: #f5c518;
+        --font-display: "Manrope", system-ui, sans-serif;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1920px; height: 1080px; overflow: hidden;
+        background: var(--ground); color: var(--ink);
+        font-family: var(--font-display);
+      }
+      #root { position: relative; width: 100%; height: 100%; }
+      .scene { position: absolute; inset: 0; }
+      .center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+      .eyebrow { font-size: 30px; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+      .display { font-size: 120px; font-weight: 700; letter-spacing: -0.045em; line-height: 1.02; }
+      .h2 { font-size: 76px; font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; }
+      .sub { font-size: 34px; color: var(--muted); font-weight: 500; }
+      .card {
+        background: var(--card); border-radius: 44px;
+        box-shadow: 0 30px 80px rgba(0,0,0,0.08), 0 2px 0 rgba(255,255,255,0.9) inset;
+      }
+      .pill {
+        display: inline-flex; align-items: center; gap: 18px;
+        background: var(--ink); color: #fff; border-radius: 999px;
+        padding: 22px 38px; font-size: 38px; font-weight: 600;
+      }
+      .chip {
+        display: inline-flex; align-items: center; gap: 12px;
+        background: var(--card); border: 2px solid var(--line); border-radius: 999px;
+        padding: 18px 30px; font-size: 30px; font-weight: 600;
+      }
+      .dot { width: 14px; height: 14px; border-radius: 50%; background: #34c759; }
+
+      /* Scene 1: hook */
+      #logo1 { width: 860px; position: absolute; left: 530px; top: 110px; overflow: visible; }
+      .logo .r-open, .logo .r-wink, .logo .spark { transform-box: fill-box; transform-origin: 50% 50%; }
+      #brand { position: absolute; left: 0; right: 0; top: 640px; }
+      #wordmark { display: inline-flex; align-items: center; gap: 22px; font-size: 64px; font-weight: 800; letter-spacing: -0.03em; }
+      #eye { width: 88px; height: 88px; border-radius: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.10); }
+
+      /* Phone mock built from the real iOS screenshot */
+      .phone {
+        position: absolute; width: 430px; height: 935px; border-radius: 64px;
+        background: #0d0d0d; padding: 14px;
+        box-shadow: 0 50px 120px rgba(0,0,0,0.18);
+      }
+      .phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 52px; display: block; }
+
+      /* Scene 2: save */
+      #s2-copy { position: absolute; left: 120px; top: 150px; width: 640px; }
+      #s2-photo { position: absolute; left: 830px; top: 170px; width: 960px; height: 720px; overflow: hidden; border-radius: 44px; }
+      #s2-photo img { width: 100%; height: 100%; object-fit: cover; }
+      #s2-box { position: absolute; left: 1080px; top: 270px; width: 440px; height: 560px; border: 8px solid var(--accent); border-radius: 26px; box-shadow: 0 0 0 4000px rgba(0,0,0,0.0); }
+      #s2-flash { position: absolute; left: 830px; top: 170px; width: 960px; height: 720px; border-radius: 44px; background: #fff; opacity: 0; }
+      #s2-toast { position: absolute; left: 980px; top: 900px; }
+      .wave { display: inline-flex; gap: 7px; align-items: center; height: 40px; }
+      .wave i { display: block; width: 7px; height: 14px; background: #fff; border-radius: 4px; }
+
+      /* Scene 3: ask */
+      #s3-left { position: absolute; left: 120px; top: 170px; width: 820px; }
+      #s3-q { margin-top: 56px; }
+      #s3-answer { position: absolute; left: 1000px; top: 200px; width: 800px; padding: 46px; }
+      #s3-answer .row { display: flex; gap: 30px; align-items: center; }
+      #s3-answer img { width: 230px; height: 230px; object-fit: cover; border-radius: 30px; }
+      .mtitle { font-size: 46px; font-weight: 700; letter-spacing: -0.03em; }
+      .msum { font-size: 28px; color: var(--muted); margin-top: 10px; line-height: 1.35; }
+      #s3-speech { margin-top: 36px; padding: 30px 34px; border-radius: 30px; background: var(--ground); font-size: 34px; font-weight: 600; line-height: 1.35; }
+      #s3-ear { margin-top: 26px; font-size: 26px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 12px; }
+
+      /* Scene 4: TV */
+      #tv { position: absolute; left: 240px; top: 150px; width: 1440px; height: 810px; border-radius: 36px; overflow: hidden; box-shadow: 0 60px 140px rgba(0,0,0,0.22); border: 14px solid #111; }
+      #tv img { width: 100%; height: 100%; object-fit: cover; }
+      #s4-cap { position: absolute; left: 0; right: 0; top: 40px; }
+      .tile { position: absolute; width: 300px; padding: 18px; }
+      .tile img { width: 100%; height: 190px; object-fit: cover; border-radius: 26px; display: block; }
+      .tile p { font-size: 26px; font-weight: 700; margin: 14px 6px 4px; letter-spacing: -0.02em; }
+
+      /* Scene 5: stack */
+      #s5-chips { display: flex; flex-wrap: wrap; gap: 22px; justify-content: center; width: 1500px; margin-top: 60px; }
+
+      /* Scene 6: end */
+      #logo2 { width: 620px; margin-bottom: 20px; overflow: visible; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="30" data-width="1920" data-height="1080">
+
+      <!-- 0–4s: hook -->
+      <section id="s1" class="clip scene" data-start="0" data-duration="6.2" data-track-index="0">
+        <svg id="logo1" class="logo" viewBox="80 440 1890 1000" xmlns="http://www.w3.org/2000/svg" aria-label="Wink logo">
+          <g fill="#f7f7f5" stroke="#171918" stroke-width="92">
+            <rect x="235" y="779" width="668" height="562" rx="190" />
+            <rect x="1145" y="779" width="668" height="562" rx="190" />
+          </g>
+          <g stroke="#171918" fill="none">
+            <line x1="909" y1="900" x2="1139" y2="900" stroke-width="78" />
+            <line x1="199" y1="851" x2="119" y2="809" stroke-width="82" />
+            <line x1="1849" y1="851" x2="1929" y2="809" stroke-width="82" />
+          </g>
+          <g class="l-eye">
+            <circle cx="569" cy="1060" r="120" fill="#54826b" />
+            <circle cx="569" cy="1060" r="52" fill="#171918" />
+            <circle cx="624" cy="1005" r="25" fill="#ffffff" />
+          </g>
+          <g class="r-open">
+            <circle cx="1479" cy="1060" r="120" fill="#54826b" />
+            <circle cx="1479" cy="1060" r="52" fill="#171918" />
+            <circle cx="1534" cy="1005" r="25" fill="#ffffff" />
+          </g>
+          <path class="r-wink" d="M 1609.6 1078.9 A 139 99 0 0 1 1348.4 1078.9" fill="none" stroke="#171918" stroke-width="72" />
+          <polygon class="spark" fill="#54826b" points="1819,465 1845.6,533.4 1914,560 1845.6,586.6 1819,655 1792.4,586.6 1724,560 1792.4,533.4" />
+        </svg>
+        <div id="brand" class="center">
+          <div id="wordmark"><img id="eye" src="assets/wink-icon.png" alt="" />wink</div>
+          <div class="display" id="hook" style="margin-top:34px">Be here. Remember everything.</div>
+        </div>
+      </section>
+
+      <!-- 4–11s: save -->
+      <section id="s2" class="clip scene" data-start="5.8" data-duration="7.0" data-track-index="1">
+        <div id="s2-copy">
+          <div class="eyebrow">Look. Point. Say it.</div>
+          <div class="h2" style="margin-top:20px">Save what<br/>you see.</div>
+          <div id="s2-pill" class="pill" style="margin-top:56px">
+            <span class="wave"><i></i><i></i><i></i><i></i><i></i></span>“Hey Wink, save this”
+          </div>
+          <div class="sub" style="margin-top:34px">Hands frame it. The phone crops it.</div>
+        </div>
+        <div id="s2-photo" class="card"><img src="assets/book.webp" alt="" /></div>
+        <div id="s2-box"></div>
+        <div id="s2-flash"></div>
+        <div id="s2-toast" class="chip"><span class="dot"></span>Saved · Project Hail Mary</div>
+      </section>
+
+      <!-- 11–18s: ask -->
+      <section id="s3" class="clip scene" data-start="12.4" data-duration="6.6" data-track-index="2">
+        <div id="s3-left">
+          <div class="eyebrow">Days later…</div>
+          <div class="h2" style="margin-top:20px">Ask. Hear it<br/>in your ear.</div>
+          <div id="s3-q" class="pill"><span class="wave"><i></i><i></i><i></i><i></i><i></i></span>“What was that book?”</div>
+        </div>
+        <div id="s3-answer" class="card">
+          <div class="row">
+            <img src="assets/book.webp" alt="" />
+            <div>
+              <div class="mtitle">Project Hail Mary</div>
+              <div class="msum">Andy Weir paperback<br/>Cafe · Saturday 2:14 PM</div>
+            </div>
+          </div>
+          <div id="s3-speech">“That was Project Hail Mary by Andy Weir, from the cafe on Saturday.”</div>
+          <div id="s3-ear">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6d6d6a" stroke-width="2.2"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+            Spoken through the glasses
+          </div>
+        </div>
+      </section>
+
+      <!-- 18–24s: TV + phone -->
+      <section id="s4" class="clip scene" data-start="18.6" data-duration="5.0" data-track-index="3">
+        <div id="s4-cap" class="center"><div class="eyebrow">Every memory, live on the big screen</div></div>
+        <div id="tv"><img src="assets/tv.png" alt="" /></div>
+        <div id="phone4" class="phone" style="left:1400px; top:180px;"><img src="assets/ios.png" alt="" /></div>
+        <div id="t1" class="tile card" style="left:90px; top:640px;"><img src="assets/wine.webp" alt="" /><p>2019 Malbec</p></div>
+        <div id="t2" class="tile card" style="left:120px; top:250px;"><img src="assets/keys.webp" alt="" /><p>House keys</p></div>
+        <div id="t3" class="tile card" style="left:760px; top:740px;"><img src="assets/coffee.webp" alt="" /><p>Yirgacheffe beans</p></div>
+      </section>
+
+      <!-- 24–27.5s: stack -->
+      <section id="s5" class="clip scene center" data-start="23.2" data-duration="4.6" data-track-index="4">
+        <div class="h2">Open models. Real data.</div>
+        <div id="s5-chips">
+          <span class="chip">Meta Ray-Ban glasses</span>
+          <span class="chip">WhisperKit wake word</span>
+          <span class="chip">MediaPipe hands</span>
+          <span class="chip">gpt-oss-120b</span>
+          <span class="chip">Mistral Small vision</span>
+          <span class="chip">Cloudflare Workers</span>
+          <span class="chip">Snowflake vectors</span>
+          <span class="chip">Overture Places</span>
+        </div>
+      </section>
+
+      <!-- 27.5–30s: end card -->
+      <section id="s6" class="clip scene center" data-start="27.4" data-duration="2.6" data-track-index="5">
+        <svg id="logo2" class="logo" viewBox="80 440 1890 1000" xmlns="http://www.w3.org/2000/svg" aria-label="Wink logo">
+          <g fill="#f7f7f5" stroke="#171918" stroke-width="92">
+            <rect x="235" y="779" width="668" height="562" rx="190" />
+            <rect x="1145" y="779" width="668" height="562" rx="190" />
+          </g>
+          <g stroke="#171918" fill="none">
+            <line x1="909" y1="900" x2="1139" y2="900" stroke-width="78" />
+            <line x1="199" y1="851" x2="119" y2="809" stroke-width="82" />
+            <line x1="1849" y1="851" x2="1929" y2="809" stroke-width="82" />
+          </g>
+          <g class="l-eye">
+            <circle cx="569" cy="1060" r="120" fill="#54826b" />
+            <circle cx="569" cy="1060" r="52" fill="#171918" />
+            <circle cx="624" cy="1005" r="25" fill="#ffffff" />
+          </g>
+          <g class="r-open">
+            <circle cx="1479" cy="1060" r="120" fill="#54826b" />
+            <circle cx="1479" cy="1060" r="52" fill="#171918" />
+            <circle cx="1534" cy="1005" r="25" fill="#ffffff" />
+          </g>
+          <path class="r-wink" d="M 1609.6 1078.9 A 139 99 0 0 1 1348.4 1078.9" fill="none" stroke="#171918" stroke-width="72" />
+          <polygon class="spark" fill="#54826b" points="1819,465 1845.6,533.4 1914,560 1845.6,586.6 1819,655 1792.4,586.6 1724,560 1792.4,533.4" />
+        </svg>
+        <div id="end-word" class="display">wink</div>
+        <div class="sub" style="margin-top:16px">Your world, remembered.</div>
+      </section>
+      <audio id="vo1" data-start="0.2" data-duration="5.376" data-track-index="10" src="assets/vo/line1.mp3"></audio>
+      <audio id="vo2" data-start="6.0" data-duration="6.264" data-track-index="11" src="assets/vo/line2.mp3"></audio>
+      <audio id="vo3" data-start="12.5" data-duration="5.904" data-track-index="12" src="assets/vo/line3.mp3"></audio>
+      <audio id="vo4" data-start="18.7" data-duration="4.296" data-track-index="13" src="assets/vo/line4.mp3"></audio>
+      <audio id="vo5" data-start="23.3" data-duration="4.104" data-track-index="14" src="assets/vo/line5.mp3"></audio>
+      <audio id="vo6" data-start="27.5" data-duration="2.448" data-track-index="15" src="assets/vo/line6.mp3"></audio>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const ease = "power3.out";
+      const pop = "back.out(1.6)";
+      const S1 = 0, S2 = 5.8, S3 = 12.4, S4 = 18.6, S5 = 23.2, S6 = 27.4;
+      const wave = (sel, at, repeat) => gsap.utils.toArray(sel).forEach((bar, i) => {
+        tl.fromTo(bar, { height: 10 }, { height: 36, duration: 0.22, repeat, yoyo: true, ease: "sine.inOut" }, at + i * 0.07);
+      });
+
+      // The logo starts with both eyes open, then the right eye closes into the wink and the sparkle pops.
+      const wink = (logo, at) => {
+        tl.set(`${logo} .r-wink`, { opacity: 0, scaleY: 0.4 }, 0)
+          .set(`${logo} .spark`, { opacity: 0, scale: 0, rotation: -90 }, 0)
+          .to(`${logo} .r-open`, { scaleY: 0.08, opacity: 0, duration: 0.14, ease: "power2.in" }, at)
+          .to(`${logo} .r-wink`, { opacity: 1, scaleY: 1, duration: 0.25, ease: "back.out(2)" }, at + 0.12)
+          .to(`${logo} .spark`, { opacity: 1, scale: 1, rotation: 0, duration: 0.5, ease: "back.out(2.2)" }, at + 0.25);
+      };
+
+      // Scene 1: hook
+      tl.fromTo("#logo1", { opacity: 0, y: 60, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 1.0, ease }, S1 + 0.1)
+        .to("#logo1", { y: -14, duration: 4.4, ease: "sine.inOut" }, S1 + 1.2);
+      wink("#logo1", S1 + 1.3);
+      tl.fromTo("#wordmark", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.7, ease }, S1 + 0.5)
+        .fromTo("#hook", { opacity: 0, y: 40, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.9, ease }, S1 + 2.0)
+        .to("#s1", { opacity: 0, duration: 0.4 }, S2);
+
+      // Scene 2: save
+      tl.fromTo("#s2", { opacity: 0 }, { opacity: 1, duration: 0.4 }, S2)
+        .fromTo("#s2-copy", { opacity: 0, x: -50 }, { opacity: 1, x: 0, duration: 0.8, ease }, S2 + 0.1)
+        .fromTo("#s2-photo", { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: 1, ease }, S2 + 0.2)
+        .fromTo("#s2-pill", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.5, ease: pop }, S2 + 2.0)
+        .fromTo("#s2-box", { opacity: 0, scale: 1.25 }, { opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.4)" }, S2 + 3.7)
+        .to("#s2-box", { boxShadow: "0 0 0 4000px rgba(0,0,0,0.35)", duration: 0.6 }, S2 + 4.3)
+        .fromTo("#s2-flash", { opacity: 0 }, { opacity: 0.9, duration: 0.08 }, S2 + 5.2)
+        .to("#s2-flash", { opacity: 0, duration: 0.5 }, S2 + 5.3)
+        .fromTo("#s2-toast", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.6, ease: pop }, S2 + 5.4)
+        .to("#s2", { opacity: 0, duration: 0.4 }, S3);
+      wave("#s2 .wave i", S2 + 2.1, 9);
+
+      // Scene 3: ask
+      tl.fromTo("#s3", { opacity: 0 }, { opacity: 1, duration: 0.4 }, S3)
+        .fromTo("#s3-left", { opacity: 0, x: -50 }, { opacity: 1, x: 0, duration: 0.8, ease }, S3 + 0.1)
+        .fromTo("#s3-q", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.5, ease: pop }, S3 + 1.1)
+        .fromTo("#s3-answer", { opacity: 0, y: 70 }, { opacity: 1, y: 0, duration: 0.9, ease }, S3 + 3.0)
+        .fromTo("#s3-speech", { opacity: 0, clipPath: "inset(0 100% 0 0)" }, { opacity: 1, clipPath: "inset(0 0% 0 0)", duration: 1.4, ease: "none" }, S3 + 3.6)
+        .fromTo("#s3-ear", { opacity: 0 }, { opacity: 1, duration: 0.5 }, S3 + 5.0)
+        .to("#s3", { opacity: 0, duration: 0.4 }, S4);
+      wave("#s3 .wave i", S3 + 1.2, 7);
+
+      // Scene 4: TV + phone
+      tl.fromTo("#s4", { opacity: 0 }, { opacity: 1, duration: 0.4 }, S4)
+        .fromTo("#tv", { opacity: 0, scale: 0.9, y: 40 }, { opacity: 1, scale: 1, y: 0, duration: 1, ease }, S4 + 0.1)
+        .fromTo("#s4-cap", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.6, ease }, S4 + 0.3)
+        .fromTo("#phone4", { opacity: 0, x: 200, rotation: 6 }, { opacity: 1, x: 0, rotation: 3, duration: 1, ease }, S4 + 0.8)
+        .fromTo("#t2", { opacity: 0, y: 60, rotation: -6 }, { opacity: 1, y: 0, rotation: -4, duration: 0.7, ease: "back.out(1.5)" }, S4 + 1.3)
+        .fromTo("#t1", { opacity: 0, y: 60, rotation: 5 }, { opacity: 1, y: 0, rotation: 3, duration: 0.7, ease: "back.out(1.5)" }, S4 + 1.6)
+        .fromTo("#t3", { opacity: 0, y: 60, rotation: -3 }, { opacity: 1, y: 0, rotation: -2, duration: 0.7, ease: "back.out(1.5)" }, S4 + 1.9)
+        .to("#tv", { scale: 1.03, duration: 2.7, ease: "sine.inOut" }, S4 + 1.9)
+        .to("#s4", { opacity: 0, duration: 0.4 }, S5);
+
+      // Scene 5: stack
+      tl.fromTo("#s5", { opacity: 0 }, { opacity: 1, duration: 0.4 }, S5)
+        .fromTo("#s5 .h2", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.7, ease }, S5 + 0.1)
+        .fromTo("#s5-chips .chip", { opacity: 0, y: 30, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: pop, stagger: 0.12 }, S5 + 0.5)
+        .to("#s5", { opacity: 0, duration: 0.4 }, S6);
+
+      // Scene 6: end card
+      tl.fromTo("#s6", { opacity: 0 }, { opacity: 1, duration: 0.4 }, S6)
+        .fromTo("#logo2", { opacity: 0, y: 40, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 0.8, ease }, S6 + 0.1)
+        .fromTo("#end-word", { opacity: 0, scale: 1.12 }, { opacity: 1, scale: 1, duration: 1.1, ease }, S6 + 0.3)
+        .to({}, { duration: 0.01 }, 29.99);
+      wink("#logo2", S6 + 0.9);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
