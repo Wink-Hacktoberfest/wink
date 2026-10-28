@@ -1,11 +1,8 @@
+// Snowflake serves only Overture Maps Places (/v1/nearby and business matching). Memories live in Neon (neon.ts).
 import { HttpError, isRecord, providerFetch } from './http.ts';
-import { parseSelection } from './parse.ts';
-import type { Env, Location, Place, StoredMemory } from './types.ts';
+import { validCoordinates } from './parse.ts';
+import type { Env, Location, Place } from './types.ts';
 
-/** Minimum cosine similarity for a memory to count as a match in /v1/ask (Arctic Embed L v2.0). */
-export const ASK_MIN_SCORE = 0.3;
-/** Also drop matches far below the best one. */
-export const ASK_RELATIVE_GAP = 0.12;
 export const NEARBY_RADIUS_METERS = 3000;
 export const BUSINESS_MATCH_RADIUS_METERS = 250;
 
@@ -169,100 +166,6 @@ export async function sql(env: Env, statement: string, binds: string[] = [], tim
   return rows;
 }
 
-// ---------- MEMORIES ----------
-
-const MEMORY_COLUMNS = `id,
-  TO_VARCHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.FF3TZH:TZM') AS created_at,
-  kind, title, summary, visible_text, TO_JSON(objects) AS objects, note, image_key,
-  TO_JSON(selection) AS selection, lat, lng, TO_JSON(place) AS place, product_query`;
-
-function parseJson<T>(text: string | null | undefined, fallback: T): T {
-  if (!text) return fallback;
-  try { return JSON.parse(text) as T; } catch { return fallback; }
-}
-
-export function rowToMemory(row: Row): StoredMemory {
-  const lat = row.lat == null ? NaN : Number(row.lat);
-  const lng = row.lng == null ? NaN : Number(row.lng);
-  const objects = parseJson<unknown>(row.objects, []);
-  const selection = parseSelection(parseJson<unknown>(row.selection, null));
-  const timestamp = row.created_at ? new Date(row.created_at) : null;
-  if (!timestamp || !Number.isFinite(timestamp.getTime())) return invalidResult();
-  return {
-    id: row.id ?? '',
-    createdAt: timestamp.toISOString(),
-    kind: row.kind === 'passive' ? 'passive' : 'explicit',
-    title: row.title ?? '',
-    summary: row.summary ?? '',
-    visibleText: row.visible_text ?? '',
-    objects: Array.isArray(objects) ? objects.filter((value): value is string => typeof value === 'string') : [],
-    note: row.note || null,
-    imageKey: row.image_key ?? '',
-    selection,
-    location: validCoordinates(lat, lng) ? { lat, lng } : null,
-    place: parseJson<Place | null>(row.place, null),
-    productQuery: row.product_query || null,
-  };
-}
-
-/** AI_EMBED needs the model as a string literal (bindings are rejected), so only plain model ids are allowed. */
-function embedModel(env: Env): string {
-  const model = env.EMBED_MODEL?.trim() || 'snowflake-arctic-embed-l-v2.0';
-  if (!/^[a-z0-9][a-z0-9._-]{0,80}$/i.test(model)) throw new HttpError(503, 'not_configured', 'EMBED_MODEL is not a valid model id.');
-  return model;
-}
-
-export function embeddingText(m: Pick<StoredMemory, 'title' | 'summary' | 'visibleText' | 'objects' | 'note'>): string {
-  return [m.title, m.summary, m.visibleText, m.objects.join(', '), m.note ?? ''].filter(Boolean).join('. ').slice(0, 4000);
-}
-
-export const insertMemorySql = (model: string) => `INSERT INTO MEMORIES
-  (id, created_at, kind, title, summary, visible_text, objects, note, image_key, selection, lat, lng, place, product_query, embedding)
-SELECT ?, TO_TIMESTAMP_TZ(?), ?, ?, ?, ?, PARSE_JSON(?), NULLIF(?, ''), ?, PARSE_JSON(?),
-  TRY_TO_DOUBLE(NULLIF(?, '')), TRY_TO_DOUBLE(NULLIF(?, '')), PARSE_JSON(NULLIF(?, '')), NULLIF(?, ''),
-  AI_EMBED('${model}', ?)`;
-
-export async function insertMemory(env: Env, m: StoredMemory): Promise<void> {
-  await sql(env, insertMemorySql(embedModel(env)), [
-    m.id, m.createdAt, m.kind, m.title, m.summary, m.visibleText, JSON.stringify(m.objects), m.note ?? '',
-    m.imageKey, JSON.stringify(m.selection), m.location ? String(m.location.lat) : '',
-    m.location ? String(m.location.lng) : '', m.place ? JSON.stringify(m.place) : '', m.productQuery ?? '',
-    embeddingText(m),
-  ]);
-}
-
-export async function listMemories(env: Env, limit: number): Promise<StoredMemory[]> {
-  const n = Math.min(200, Math.max(1, Math.floor(limit) || 50));
-  const rows = await sql(env, `SELECT ${MEMORY_COLUMNS} FROM MEMORIES ORDER BY created_at DESC LIMIT ${n}`);
-  return rows.map(rowToMemory);
-}
-
-export async function getMemory(env: Env, id: string): Promise<StoredMemory | null> {
-  const rows = await sql(env, `SELECT ${MEMORY_COLUMNS} FROM MEMORIES WHERE id = ?`, [id]);
-  return rows[0] ? rowToMemory(rows[0]) : null;
-}
-
-export async function deleteMemory(env: Env, id: string): Promise<string | null> {
-  const rows = await sql(env, 'SELECT image_key FROM MEMORIES WHERE id = ?', [id]);
-  await sql(env, 'DELETE FROM MEMORIES WHERE id = ?', [id]);
-  return rows[0]?.image_key ?? null;
-}
-
-export const searchMemoriesSql = (model: string) => `SELECT ${MEMORY_COLUMNS},
-  VECTOR_COSINE_SIMILARITY(embedding, AI_EMBED('${model}', ?)) AS score
-FROM MEMORIES
-WHERE embedding IS NOT NULL
-ORDER BY score DESC
-LIMIT 3`;
-
-/** Top-3 vector search, weak matches dropped. Best match first. */
-export async function searchMemories(env: Env, question: string): Promise<Array<StoredMemory & { score: number }>> {
-  const rows = await sql(env, searchMemoriesSql(embedModel(env)), [question.slice(0, 2000)]);
-  const scored = rows.map((row) => ({ ...rowToMemory(row), score: Number(row.score ?? 0) }));
-  const best = scored[0]?.score ?? 0;
-  return scored.filter((m) => m.score >= ASK_MIN_SCORE && m.score >= best - ASK_RELATIVE_GAP);
-}
-
 // ---------- OVERTURE PLACES ----------
 
 /** Validate each component because OVERTURE_PLACES_TABLE is interpolated into SQL. */
@@ -332,10 +235,6 @@ WHERE ST_DWITHIN(GEOMETRY, ST_MAKEPOINT(?::FLOAT, ?::FLOAT), ?::FLOAT)
   AND JAROWINKLER_SIMILARITY(LOWER(NAMES:primary::STRING), LOWER(?)) >= 85
 ORDER BY similarity DESC, meters
 LIMIT 1`;
-}
-
-function validCoordinates(lat: number, lng: number): boolean {
-  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 }
 
 function rowToPlace(row: Row): Place | null {

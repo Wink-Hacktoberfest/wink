@@ -4,5 +4,7 @@
 WINK_TOKEN=
 # DigitalOcean Gradient serverless inference "model access key".
 DO_MODEL_ACCESS_KEY=
-# Snowflake programmatic access token (PAT) for the Wink service user. See ../snowflake/README.md.
+# Neon connection string for the wink_app role (memories). See ../neon/README.md.
+DATABASE_URL=
+# Snowflake programmatic access token (PAT) for the Wink service user (Overture places only). See ../snowflake/README.md.
 SNOWFLAKE_PAT=

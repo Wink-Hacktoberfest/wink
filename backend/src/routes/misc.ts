@@ -1,4 +1,4 @@
-import { chatModel, visionTarget } from '../inference.ts';
+import { chatModel, embedModel, visionTarget } from '../inference.ts';
 import { HttpError, json, readJson } from '../http.ts';
 import { broadcast } from '../live.ts';
 import { sampleImageAsset, sampleImageSvg } from '../mock.ts';
@@ -14,7 +14,7 @@ export async function health({ env }: RouteContext): Promise<Response> {
     models: {
       chat: chatModel(env),
       vision: visionTarget(env).model,
-      embed: env.EMBED_MODEL?.trim() || 'snowflake-arctic-embed-l-v2.0',
+      embed: embedModel(env),
     },
   });
 }
