@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { HttpError } from '../src/http.ts';
 import {
-  backfillEmbeddings, deleteMemory, insertMemory, query, rowToMemory, searchMemories, StoreRejectedError,
+  backfillEmbeddings, deleteMemory, insertMemory, pickMatches, query, rowToMemory, searchMemories, StoreRejectedError,
 } from '../src/neon.ts';
 import type { Env, StoredMemory } from '../src/types.ts';
 
@@ -129,6 +129,25 @@ test('search compares only same-model vectors and drops weak or distant matches'
   assert.deepEqual(matches.map((match) => match.score), [0.81, 0.76]);
   assert.equal(sent[0]!.body.params[1], '@cf/baai/bge-m3');
   assert.match(sent[0]!.body.query, /embed_model = \$2/);
+});
+
+test('ask matches follow the scores measured on the real memories', () => {
+  const pick = (...scores: number[]) => pickMatches(scores.map((score) => ({ score }))).map((m) => m.score);
+  // Unrelated questions score alike against everything: no clear leader, so no match.
+  assert.deepEqual(pick(0.402, 0.365, 0.363), []); // "where did I park my car?"
+  assert.deepEqual(pick(0.438, 0.404, 0.39), []); // "what's my wifi password?"
+  assert.deepEqual(pick(0.423, 0.381, 0.373), []); // "what did I eat for lunch?"
+  assert.deepEqual(pick(0.311, 0.288, 0.267), []); // "what was that book?" with no book saved
+  // A real match on a short question can score low but leads clearly.
+  assert.deepEqual(pick(0.414, 0.311, 0.288), [0.414]); // "what was that book?" right after saving one
+  assert.deepEqual(pick(0.491, 0.435, 0.376), [0.491, 0.435]); // "what was the meeting about?"
+  // Strong matches always count and bring close neighbours along.
+  assert.deepEqual(pick(0.669, 0.623, 0.601), [0.669, 0.623, 0.601]); // "what classroom was I in?"
+  assert.deepEqual(pick(0.616, 0.569, 0.524), [0.616, 0.569]); // "did I see a projector?"
+  // A lone memory has to lead the floor.
+  assert.deepEqual(pick(0.414), [0.414]);
+  assert.deepEqual(pick(0.38), []);
+  assert.deepEqual(pick(), []);
 });
 
 test('delete returns the image key so the route can clean R2', async (t) => {

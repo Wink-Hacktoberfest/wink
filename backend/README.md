@@ -79,7 +79,7 @@ The deploy prints `https://wink-api.<subdomain>.workers.dev`; share it in AGENTS
 - Images are cleaned up after a definite rejected INSERT (Postgres answered with an error). A timeout or transport failure may follow a committed INSERT, so its image is retained for reconciliation rather than breaking a saved memory. No SQL writes are automatically retried.
 - Client WebSocket events are validated; forged `memory.*`/answer events are discarded. Pointer/frame traffic is capped at 20/2 messages per second per socket, including hibernation.
 - Embeddings come from Workers AI (`EMBED_MODEL`, default `@cf/baai/bge-m3`). A save whose embedding fails is stored without a vector; `GET /v1/memories` backfills up to 20 such rows in the background.
-- `/v1/ask` drops matches below cosine 0.40 or more than 0.08 below the best one (tune `ASK_MIN_SCORE` / `ASK_RELATIVE_GAP` in `src/neon.ts` after a few real memories).
+- `/v1/ask` counts the best match if its cosine is ≥ 0.50, or ≥ 0.35 and at least 0.05 ahead of the runner-up; then it keeps others within 0.08 of it. The constants are `ASK_*` in `src/neon.ts`, and the scores they came from are in `neon/README.md`. "What did I just save?" also gets the newest memory, because embeddings carry no time.
 - `npm run copy:snowflake` copies the old Snowflake `MEMORIES` rows into Neon once (see `../neon/README.md`).
 - Snowflake bindings are all `TEXT` (see `../snowflake/03_app_queries.sql`).
 - Debug the TV from the browser console: `wink.handle({ type: 'pointer', x: 0.5, y: 0.5, pinching: true })`.

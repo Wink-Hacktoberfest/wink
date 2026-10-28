@@ -4,12 +4,15 @@ import { broadcast, mockStore } from '../live.ts';
 import { mockSearch } from '../mock.ts';
 import { ASK_SYSTEM } from '../prompts.ts';
 import { isMock } from '../parse.ts';
-import { searchMemories } from '../neon.ts';
+import { listMemories, searchMemories } from '../neon.ts';
 import { sanitizeSpeech, timeAgo } from '../speech.ts';
 import type { StoredMemory } from '../types.ts';
 import { background, toMemory, type RouteContext } from './context.ts';
 
 export const NO_MATCH_SPEECH = "I don't have a memory of that yet.";
+
+/** "What did I just save?" is about time, which the embeddings don't capture, so it also gets the newest memory. */
+export const RECENT_QUESTION = /\b(just|last|latest|most recent(ly)?)\b.*\b(sav(e|ed)|captur(e|ed))\b/i;
 
 export function templateAnswer(m: StoredMemory, now = Date.now()): string {
   const when = timeAgo(m.createdAt, now);
@@ -42,11 +45,15 @@ export async function ask({ request, env, ctx, url }: RouteContext): Promise<Res
     matches = mockSearch(memories, question);
     speech = matches[0] ? templateAnswer(matches[0]) : NO_MATCH_SPEECH;
   } else {
-    matches = await searchMemories(env, question);
+    const [found, latest] = await Promise.all([
+      searchMemories(env, question),
+      RECENT_QUESTION.test(question) ? listMemories(env, 1) : Promise.resolve([]),
+    ]);
+    matches = latest[0] ? [latest[0], ...found.filter((m) => m.id !== latest[0]!.id)] : found;
     if (!matches.length) {
       speech = NO_MATCH_SPEECH;
     } else {
-      const prompt = `Question: ${question}\n\nSaved memories, best match first:\n${memoryContext(matches)}`;
+      const prompt = `Question: ${question}\n\nSaved memories that may answer it:\n${memoryContext(matches)}`;
       const reply = await chat(env, ASK_SYSTEM, prompt, 700).catch((error) => {
         console.error(`ask chat failed: ${error instanceof Error ? error.message : String(error)}`);
         return templateAnswer(matches[0]!);

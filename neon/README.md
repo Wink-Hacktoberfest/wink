@@ -45,5 +45,23 @@ Never paste the connection string into chat, a commit or a screenshot. It contai
 - **Cold starts.** The free plan suspends the database after 5 idle minutes. The first query after that takes about half a second longer.
 - **Failures.** A save whose embedding call fails is still stored, without a vector, and is backfilled later. A Postgres error means nothing was written, so the Worker deletes the uploaded image. A timeout or dropped connection may follow a committed insert, so the image is kept.
 - **Changing the embedding model.** Set `EMBED_MODEL` to another 1024-dimension Workers AI model. Each row records the model that embedded it; search only compares rows from the current model, and the backfill re-embeds the rest.
-- **Tuning.** `/v1/ask` drops matches below cosine 0.40, or more than 0.08 below the best match (`ASK_MIN_SCORE`, `ASK_RELATIVE_GAP` in `backend/src/neon.ts`). Those came from a small test set; tune them on real memories.
+- **Tuning.** `/v1/ask` counts the best match if its cosine is ≥ 0.50 (`ASK_STRONG_SCORE`), or ≥ 0.35 (`ASK_MIN_SCORE`) and at least 0.05 ahead of the runner-up (`ASK_MIN_LEAD`). It then keeps others within 0.08 of it (`ASK_RELATIVE_GAP`). All four are in `backend/src/neon.ts`. Questions about the last save ("what did I just save?") also get the newest memory, since embeddings carry no time.
+
+  Measured 2026-10-28 with BGE-M3 against the 7 real memories plus one test book cover (deleted afterwards). The columns are the best, second and third cosine:
+
+  | Question | Top 3 | Right answer | Old rule (≥ 0.40) | New rule |
+  |---|---|---|---|---|
+  | where did I park my car? | 0.402, 0.365, 0.363 | none | weak match ✗ | none ✓ |
+  | what's my wifi password? | 0.438, 0.404, 0.390 | none | 2 weak matches ✗ | none ✓ |
+  | what did I eat for lunch? | 0.423, 0.381, 0.373 | none | weak match ✗ | none ✓ |
+  | what was that book? (before the book) | 0.311, 0.288, 0.267 | none | none ✓ | none ✓ |
+  | what was that book? (after the book) | 0.414, 0.311, 0.288 | the book | the book ✓ (barely) | the book ✓ |
+  | what was the meeting about? | 0.491, 0.435, 0.376 | the meeting | meeting + workshop | meeting + workshop |
+  | who was laughing? | 0.590, 0.440, 0.427 | man laughing | ✓ | ✓ |
+  | what was that Sooners shirt? | 0.651, 0.302, 0.275 | the shirt | ✓ | ✓ |
+  | what classroom was I in? | 0.669, 0.623, 0.601 | 3 classrooms | ✓ | ✓ |
+  | did I see a projector? | 0.616, 0.569, 0.524 | meeting + classroom | ✓ | ✓ |
+  | what did I just save? | 0.387, 0.377, 0.362 (book 4th, 0.346) | the book | none ✗ | the book ✓ (newest memory) |
+
+  Unrelated questions score 0.40–0.44 against everything alike (a lead of at most 0.042), while real matches led by 0.056 or more (most by over 0.10). That is why the lead decides the middle band and an absolute cutoff alone can't. One known gap: two near-identical memories that both score below 0.50 cancel each other's lead.
 - **Looking at the data.** Any Postgres client works with the owner role's connection string, e.g. `SELECT id, created_at, title, embed_model FROM memories ORDER BY created_at DESC LIMIT 20;`.

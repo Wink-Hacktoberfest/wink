@@ -4,9 +4,16 @@ import { embed, embedMany, embedModel } from './inference.ts';
 import { parseSelection, validCoordinates } from './parse.ts';
 import type { Env, Place, StoredMemory } from './types.ts';
 
-/** Minimum cosine similarity for a memory to count as a match in /v1/ask (BGE-M3; tune on real memories). */
-export const ASK_MIN_SCORE = 0.4;
-/** Also drop matches far below the best one. */
+// /v1/ask match rules, BGE-M3 cosine similarity measured on the real memories (2026-10-28, numbers in neon/README.md).
+// Unrelated questions ("where did I park my car?") score 0.40–0.44 against everything alike, while a real match on a
+// short question can score as low as 0.41, so the best match's lead over the runner-up decides the middle band.
+/** A best match at or above this always counts. */
+export const ASK_STRONG_SCORE = 0.5;
+/** Nothing below this counts. */
+export const ASK_MIN_SCORE = 0.35;
+/** Between the two, the best match must lead the runner-up (or ASK_MIN_SCORE when it is alone) by this much. */
+export const ASK_MIN_LEAD = 0.05;
+/** Once the best match counts, also keep others this close to it. */
 export const ASK_RELATIVE_GAP = 0.08;
 
 export type Row = Record<string, string | null>;
@@ -161,8 +168,14 @@ LIMIT 3`;
 export async function searchMemories(env: Env, question: string): Promise<Array<StoredMemory & { score: number }>> {
   const vector = await embed(env, question.slice(0, 2000));
   const rows = await query(env, SEARCH_MEMORIES_SQL, [vectorLiteral(vector), embedModel(env)]);
-  const scored = rows.map((row) => ({ ...rowToMemory(row), score: Number(row.score ?? 0) }));
+  return pickMatches(rows.map((row) => ({ ...rowToMemory(row), score: Number(row.score ?? 0) })));
+}
+
+/** Applies the ASK_* rules to search results sorted best first. */
+export function pickMatches<T extends { score: number }>(scored: T[]): T[] {
   const best = scored[0]?.score ?? 0;
+  const lead = best - Math.max(scored[1]?.score ?? 0, ASK_MIN_SCORE);
+  if (best < ASK_MIN_SCORE || (best < ASK_STRONG_SCORE && lead < ASK_MIN_LEAD)) return [];
   return scored.filter((m) => m.score >= ASK_MIN_SCORE && m.score >= best - ASK_RELATIVE_GAP);
 }
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, mock, test } from 'node:test';
 import worker, { LiveRoom } from '../src/index.ts';
+import { RECENT_QUESTION } from '../src/routes/ask.ts';
 import type { Env, LiveEvent } from '../src/types.ts';
 
 const ORIGIN = 'https://wink-api.example';
@@ -284,6 +285,42 @@ test('real routes: vision → R2 → embedded Neon insert → search/answer → 
   assert.equal((await call(env, 'DELETE', `/v1/memories/${memory.id}`)).status, 204);
   assert.equal(images.size, 0);
   assert.deepEqual(sent.map((event) => event.type), ['memory.saved', 'answer', 'memory.deleted']);
+});
+
+test('real ask adds the newest memory when the question is about the last save', async () => {
+  const { env } = realEnvironment();
+  const old = { id: 'old', created_at: '2026-10-26T19:12:03.000Z', title: 'Oklahoma Sooners shirt', objects: '["shirt"]' };
+  const newest = { id: 'newest', created_at: '2026-10-28T23:35:00.000Z', title: 'Project Hail Mary book', objects: '["book"]' };
+  const queries: string[] = [];
+  let prompt = '';
+  mock.method(globalThis, 'fetch', async (input: string, init: RequestInit) => {
+    if (input.startsWith('https://inference.do-ai.run/')) {
+      prompt = String(init.body);
+      return Response.json({ choices: [{ finish_reason: 'stop', message: { content: 'You just saved Project Hail Mary.' } }] });
+    }
+    const payload = JSON.parse(String(init.body)) as { query: string };
+    queries.push(payload.query);
+    // Search finds nothing clear; the newest-first listing returns the book.
+    return payload.query.includes('<=>') ? sqlResult([{ ...old, score: '0.39' }]) : sqlResult([newest]);
+  });
+  const answer = await (await call(env, 'POST', '/v1/ask', { question: 'what did I just save?' })).json() as { speech: string; memories: Array<{ id: string }> };
+  assert.deepEqual(answer.memories.map((m) => m.id), ['newest']);
+  assert.match(answer.speech, /Project Hail Mary/);
+  assert.match(prompt, /Project Hail Mary book/);
+  assert.equal(queries.filter((q) => q.includes('ORDER BY created_at DESC')).length, 1);
+
+  queries.length = 0;
+  await call(env, 'POST', '/v1/ask', { question: 'what was that shirt?' });
+  assert.equal(queries.some((q) => q.includes('ORDER BY created_at DESC')), false);
+});
+
+test('recent-save questions are recognised without catching ordinary ones', () => {
+  for (const q of ['what did I just save?', 'What was the last thing I saved?', "what's the latest thing I captured", 'what was the book I just saved?']) {
+    assert.match(q, RECENT_QUESTION, q);
+  }
+  for (const q of ['what was that book?', 'where did I park my car?', 'how long does the battery last?', 'save this']) {
+    assert.doesNotMatch(q, RECENT_QUESTION, q);
+  }
 });
 
 test('failed inserts clean images only on definite rejection, preserving ambiguous commits', async () => {
