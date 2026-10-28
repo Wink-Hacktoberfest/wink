@@ -18,6 +18,9 @@ build/
 # CocoaPods
 ios/Pods/
 
+# CI package checkout (xcodebuild -clonedSourcePackagesDirPath)
+ios/.spm/
+
 # iOS secrets
 ios/Config/Secrets.xcconfig
 
