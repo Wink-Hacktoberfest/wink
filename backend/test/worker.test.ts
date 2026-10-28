@@ -228,34 +228,43 @@ test('deletion keeps the row retryable when R2 fails and images are never cached
 });
 
 function realEnvironment() {
-  return environment({ MOCK: 'false', SNOWFLAKE_ACCOUNT_URL: 'https://example.snowflakecomputing.com', SNOWFLAKE_PAT: 'test-pat',
+  return environment({ MOCK: 'false', DATABASE_URL: 'postgresql://wink_app:secret@ep-test.us-east-2.aws.neon.tech/wink',
     DO_MODEL_ACCESS_KEY: 'test-model-key', VISION_PROVIDER: 'workers-ai',
-    AI: { async run() { return { response: JSON.stringify({ title: 'Project Hail Mary', summary: 'A science fiction book.', objects: ['book'], visibleText: 'Andy Weir' }) }; } },
+    AI: { async run(model: string) {
+      if (model.includes('bge')) return { data: [Array.from({ length: 1024 }, () => 0.5)] };
+      return { response: JSON.stringify({ title: 'Project Hail Mary', summary: 'A science fiction book.', objects: ['book'], visibleText: 'Andy Weir' }) };
+    } },
   });
 }
 
+/** Neon SQL-over-HTTP reply: raw text values in array mode. */
 function sqlResult(values: Record<string, unknown>[]) {
   const names = Object.keys(values[0] ?? {});
-  return Response.json({ resultSetMetaData: { rowType: names.map((name) => ({ name })) }, data: values.map((row) => names.map((key) => row[key])) });
+  return Response.json({ fields: names.map((name) => ({ name, dataTypeID: 25 })),
+    rows: values.map((row) => names.map((key) => (row[key] == null ? null : String(row[key])))) });
 }
 
-test('real routes: vision → R2 → embedded SQL insert → search/answer → delete', async () => {
+test('real routes: vision → R2 → embedded Neon insert → search/answer → delete', async () => {
   const { env, images, sent } = realEnvironment();
-  let row: Record<string, string | null> | undefined;
-  let insertStatement = '';
+  let row: Record<string, unknown> | undefined;
+  let insertParams: unknown[] = [];
   mock.method(globalThis, 'fetch', async (input: string, init: RequestInit) => {
     assert.equal(init.redirect, 'manual');
     if (input.startsWith('https://inference.do-ai.run/')) {
       return Response.json({ choices: [{ finish_reason: 'stop', message: { content: 'That was Project Hail Mary by Andy Weir.' } }] });
     }
-    const payload = JSON.parse(String(init.body)) as { statement: string; bindings?: Record<string, { value: string }> };
-    if (payload.statement.startsWith('INSERT')) {
-      insertStatement = payload.statement;
+    const payload = JSON.parse(String(init.body)) as { query: string; params: unknown[] };
+    if (payload.query.startsWith('INSERT')) {
+      insertParams = payload.params;
       const keys = ['id', 'created_at', 'kind', 'title', 'summary', 'visible_text', 'objects', 'note', 'image_key', 'selection', 'lat', 'lng', 'place', 'product_query'];
-      row = Object.fromEntries(keys.map((key, i) => [key, payload.bindings![String(i + 1)]!.value || null]));
-      return sqlResult([{ rows: '1' }]);
+      row = Object.fromEntries(keys.map((key, i) => [key, payload.params[i]]));
+      return sqlResult([]);
     }
-    if (payload.statement.startsWith('DELETE')) { row = undefined; return sqlResult([{ rows: '1' }]); }
+    if (payload.query.startsWith('DELETE')) {
+      const deleted = row;
+      row = undefined;
+      return sqlResult(deleted ? [{ image_key: deleted.image_key }] : []);
+    }
     return sqlResult(row ? [{ ...row, score: '0.9' }] : []);
   });
   const saved = await call(env, 'POST', '/v1/memories', upload({ note: 'book from Sam', location: null }));
@@ -263,7 +272,8 @@ test('real routes: vision → R2 → embedded SQL insert → search/answer → d
   const { memory } = await saved.json() as { memory: { id: string; title: string; imageKey?: string } };
   assert.equal(memory.title, 'Project Hail Mary');
   assert.equal(memory.imageKey, undefined);
-  assert.match(insertStatement, /AI_EMBED/);
+  assert.match(String(insertParams[14]), /^\[0\.5,/);
+  assert.equal(insertParams[15], '@cf/baai/bge-m3');
   assert.equal(images.size, 1);
   const answer = await call(env, 'POST', '/v1/ask', { question: 'what was that book?' });
   assert.equal(answer.status, 200);
@@ -277,21 +287,19 @@ test('real routes: vision → R2 → embedded SQL insert → search/answer → d
 });
 
 test('failed inserts clean images only on definite rejection, preserving ambiguous commits', async () => {
-  for (const [status, retained] of [[422, 0], [500, 1]] as const) {
+  const replies: Array<[() => Response, number]> = [
+    [() => Response.json({ message: 'check violation', code: '23514' }, { status: 400 }), 0],
+    [() => new Response('upstream', { status: 500 }), 1],
+    [() => { throw new TypeError('connection reset'); }, 1],
+  ];
+  for (const [reply, retained] of replies) {
     const { env, images, sent } = realEnvironment();
-    const transport = mock.method(globalThis, 'fetch', async () => Response.json({ code: 'test' }, { status }));
+    const transport = mock.method(globalThis, 'fetch', async () => reply());
     assert.equal((await call(env, 'POST', '/v1/memories', upload({ note: 'book' }))).status, 502);
     assert.equal(images.size, retained);
     assert.equal(sent.length, 0);
     transport.mock.restore();
   }
-  const { env, images, sent } = realEnvironment();
-  mock.method(globalThis, 'fetch', async (_input: string, init: RequestInit) => init.method === 'POST'
-    ? Response.json({ statementHandle: 'accepted' }, { status: 202 })
-    : Response.json({ code: 'expired-token' }, { status: 401 }));
-  assert.equal((await call(env, 'POST', '/v1/memories', upload({ note: 'book' }))).status, 502);
-  assert.equal(images.size, 1);
-  assert.equal(sent.length, 0);
 });
 
 test('invalid route escapes, spoofed live events, and missing nearby memories return contract errors', async () => {

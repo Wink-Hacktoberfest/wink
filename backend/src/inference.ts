@@ -6,6 +6,8 @@ import type { Env, VisionResult } from './types.ts';
 const DO_CHAT_URL = 'https://inference.do-ai.run/v1/chat/completions';
 const WORKERS_VISION_MODEL = '@cf/mistralai/mistral-small-3.1-24b-instruct';
 const WORKERS_CHAT_MODEL = '@cf/openai/gpt-oss-120b';
+const WORKERS_EMBED_MODEL = '@cf/baai/bge-m3';
+export const EMBED_DIMENSIONS = 1024;
 
 type ContentPart = { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } };
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string | ContentPart[] };
@@ -140,6 +142,33 @@ export function chat(env: Env, system: string, user: string, maxTokens = 700): P
   const options = { maxTokens, temperature: 0.3, reasoning: true };
   if (chatProvider(env) === 'workers-ai') return workersAiChat(env, chatModel(env), messages, options);
   return doChat(env, chatModel(env), messages, options);
+}
+
+/** Workers AI embedding model; the Neon column is vector(1024), so swaps must keep 1024 dimensions. */
+export function embedModel(env: Env): string {
+  const model = env.EMBED_MODEL?.trim();
+  return model?.startsWith('@cf/') ? model : WORKERS_EMBED_MODEL;
+}
+
+/** Texts → 1024-d vectors in one Workers AI call, validated before they reach SQL. */
+export async function embedMany(env: Env, texts: string[]): Promise<number[][]> {
+  let result: unknown;
+  try {
+    result = await runWorkersAi(env, embedModel(env), { text: texts }, 15_000);
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    console.error('Workers AI embedding failed.');
+    throw new HttpError(502, 'provider_error', 'The embedding model could not complete the request.');
+  }
+  const vectors = isRecord(result) ? result.data ?? result.response : null;
+  const valid = Array.isArray(vectors) && vectors.length === texts.length && vectors.every((vector) => Array.isArray(vector)
+    && vector.length === EMBED_DIMENSIONS && vector.every((n) => typeof n === 'number' && Number.isFinite(n)));
+  if (!valid) throw new HttpError(502, 'provider_error', 'The embedding model returned an invalid vector.');
+  return vectors as number[][];
+}
+
+export async function embed(env: Env, text: string): Promise<number[]> {
+  return (await embedMany(env, [text]))[0]!;
 }
 
 /** Fail the request instead of storing provider errors, refusals, or broken JSON as a memory. */

@@ -82,7 +82,7 @@ export function seedMemories(now = Date.now()): StoredMemory[] {
   }));
 }
 
-/** Keyword overlap search standing in for the Snowflake vector search. */
+/** Keyword overlap search standing in for the Neon vector search. */
 export function mockSearch(memories: StoredMemory[], question: string): StoredMemory[] {
   const stop = new Set(['what', 'was', 'that', 'the', 'where', 'did', 'put', 'my', 'is', 'a', 'an', 'of', 'i', 'saw',
     'hey', 'wink', 'which', 'one', 'it', 'this', 'thing', 'to', 'do', 'you', 'remember', 'again', 'me', 'tell']);

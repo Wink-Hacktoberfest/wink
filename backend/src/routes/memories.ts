@@ -3,7 +3,8 @@ import { HttpError, json, readUpload } from '../http.ts';
 import { broadcast, mockStore } from '../live.ts';
 import { mockVision } from '../mock.ts';
 import { isMock, optionalString, parseSelection, resolveLocation } from '../parse.ts';
-import { deleteMemory, getMemory, insertMemory, listMemories, matchBusiness, SnowflakeRejectedError } from '../snowflake.ts';
+import { backfillEmbeddings, deleteMemory, getMemory, insertMemory, listMemories, StoreRejectedError } from '../neon.ts';
+import { matchBusiness } from '../snowflake.ts';
 import { sanitizeSpeech } from '../speech.ts';
 import type { Place, StoredMemory, VisionResult } from '../types.ts';
 import { background, capitalize, toMemory, withTimeout, type RouteContext } from './context.ts';
@@ -85,8 +86,8 @@ export async function createMemory({ request, env, ctx, url }: RouteContext): Pr
     else await insertMemory(env, stored);
   } catch (error) {
     // A timeout/network failure may follow a committed INSERT: keep its image until reconciled.
-    // Only discard images when Snowflake explicitly rejected the statement before committing.
-    const definiteFailure = error instanceof SnowflakeRejectedError ||
+    // Only discard images when Postgres explicitly rejected the statement, so nothing committed.
+    const definiteFailure = error instanceof StoreRejectedError ||
       (error instanceof HttpError && error.code === 'not_configured');
     if (definiteFailure && !imageKey.startsWith('sample-')) {
       await env.IMAGES.delete(imageKey).catch(() => console.error('Failed to remove an uncommitted image.'));
@@ -100,11 +101,17 @@ export async function createMemory({ request, env, ctx, url }: RouteContext): Pr
   return json({ memory, speech }, 201);
 }
 
-export async function getMemories({ env, url }: RouteContext): Promise<Response> {
+export async function getMemories({ env, ctx, url }: RouteContext): Promise<Response> {
   const limit = Math.min(200, Math.max(1, Math.floor(Number(url.searchParams.get('limit') ?? '50')) || 50));
   const stored = isMock(env)
     ? (await mockStore<{ memories: StoredMemory[] }>(env, 'GET')).memories.slice(0, limit)
     : await listMemories(env, limit);
+  if (!isMock(env)) {
+    // Lists are frequent (app and TV start-up), so they quietly embed any rows still missing a vector.
+    await background(ctx, backfillEmbeddings(env).catch((error) => {
+      console.error(`embedding backfill skipped: ${error instanceof Error ? error.message : String(error)}`);
+    }));
+  }
   return json({ memories: stored.map((m) => toMemory(m, url.origin)) });
 }
 

@@ -12,7 +12,8 @@ Built in 5 hours at the Hacktoberfest 2026 mini hackathon (Hacklahoma) by Arboy 
 Glasses camera + mic ─► iPhone: WhisperKit ("Hey Wink") + MediaPipe Hands (gestures) + crop
                      ─► Cloudflare Worker ─► R2 (images) · Durable Object (live TV feed)
                                          ─► Workers AI: Mistral Small 3.1 (vision) + gpt-oss-120b
-                                         ─► Snowflake: memory vectors (Arctic Embed) + Overture Maps Places
+                                         ─► Workers AI: BGE-M3 embeddings ─► Neon Postgres + pgvector (memories)
+                                         ─► Snowflake: Overture Maps Places (nearby)
                      ◄─ spoken answer in the glasses
 ```
 
@@ -24,7 +25,7 @@ Glasses camera + mic ─► iPhone: WhisperKit ("Hey Wink") + MediaPipe Hands (g
 | Hand gestures | MediaPipe Hand Landmarker | on the iPhone |
 | Understanding what you saved | Mistral Small 3.1 (Apache-2.0) | Cloudflare Workers AI |
 | Answers and spoken replies | gpt-oss-120b (Apache-2.0) | Cloudflare Workers AI |
-| Memory search | Snowflake Arctic Embed L v2.0 | Snowflake Cortex |
+| Memory search | BGE-M3 embeddings (MIT), pgvector | Cloudflare Workers AI + Neon |
 
 ## Snowflake
 
@@ -35,12 +36,13 @@ Glasses camera + mic ─► iPhone: WhisperKit ("Hey Wink") + MediaPipe Hands (g
 
 - `ios/`: SwiftUI iPhone app for the glasses. Setup in `ios/README.md`.
 - `backend/`: Cloudflare Worker API, live WebSocket hub and TV dashboard. Setup in `backend/README.md`.
-- `snowflake/`: setup SQL, Overture exploration, app queries.
+- `neon/`: memory store schema and setup.
+- `snowflake/`: setup SQL, Overture exploration, places queries.
 - `docs/api.md`: the API contract. `PRD.md`: product spec. `demo/DEMO.md`: demo script.
 
 ## Privacy
 
-Wink only captures when you ask, by voice or gesture. Memories live in your own Snowflake account and R2 bucket, and "Hey Wink, forget that" deletes one. Every model is open-weight, so the whole stack can be self-hosted.
+Wink only captures when you ask, by voice or gesture. Memories live in your own Neon database and R2 bucket, and "Hey Wink, forget that" deletes one. Every model is open-weight, so the whole stack can be self-hosted.
 
 ## License
 

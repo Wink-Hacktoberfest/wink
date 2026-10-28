@@ -8,7 +8,7 @@ The single contract between the iOS/glasses app (`ios/`, Arboy) and the backend 
 - JSON bodies are `application/json`; uploads are `multipart/form-data`.
 - Errors: any non-2xx returns `{ "error": { "code": "string", "message": "string" } }`.
 - **`speech` is spoken into the wearer's ear**: one or two sentences, at most ~25 words, no markdown, no emoji, no URLs.
-- **Mock mode**: with `MOCK=true` the backend returns canned responses for every route without calling DigitalOcean or Snowflake, so iOS can integrate from minute one.
+- **Mock mode**: with `MOCK=true` the backend returns canned responses for every route without calling Workers AI, DigitalOcean, Neon or Snowflake, so iOS can integrate from minute one.
 
 ## Shared types
 

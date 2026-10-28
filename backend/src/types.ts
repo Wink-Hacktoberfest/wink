@@ -91,6 +91,7 @@ export interface Env {
   VISION_MODEL?: string;
   WORKERS_AI_VISION_MODEL?: string;
   EMBED_MODEL?: string;
+  DATABASE_URL?: string;
   SNOWFLAKE_ACCOUNT_URL?: string;
   SNOWFLAKE_WAREHOUSE?: string;
   SNOWFLAKE_DATABASE?: string;

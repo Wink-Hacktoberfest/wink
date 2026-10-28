@@ -1,20 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { HttpError } from '../src/http.ts';
-import { insertMemory, nearbyPlaces, placesTable, rowToMemory, searchMemories, sql, SnowflakeRejectedError } from '../src/snowflake.ts';
-import type { Env, StoredMemory } from '../src/types.ts';
+import { nearbyPlaces, placesTable, sql, SnowflakeRejectedError } from '../src/snowflake.ts';
+import type { Env } from '../src/types.ts';
 
 const env = { SNOWFLAKE_ACCOUNT_URL: 'https://test-account.snowflakecomputing.com', SNOWFLAKE_PAT: 'test-pat' } as Env;
-const memory: StoredMemory = {
-  id: 'memory-id', createdAt: '2026-10-26T19:12:03.000Z', kind: 'explicit', title: "Sam's book",
-  summary: 'A book about space.', visibleText: 'COSMOS', objects: ['book'], note: null,
-  imageKey: 'image-id.jpg', selection: { mode: 'full', box: null }, location: null, place: null,
-};
 function result(names: string[], data: Array<Array<string | number | null>>, extra: Record<string, unknown> = {}) {
   return { resultSetMetaData: { rowType: names.map((name) => ({ name })), numRows: data.length }, data, ...extra };
 }
-function memoryRow(score: string) { return [memory.id, memory.createdAt, memory.title, '["book"]', score]; }
-const memoryNames = ['ID', 'CREATED_AT', 'TITLE', 'OBJECTS', 'SCORE'];
 const hasCode = (code: string) => (error: unknown) => error instanceof HttpError && error.code === code;
 
 test('SQL API binds values, keeps PAT on its configured origin, and polls without repeating POST', async (t) => {
@@ -94,45 +87,6 @@ test('SQL API rejects unsafe account configuration before sending the PAT', asyn
     await assert.rejects(sql({ ...env, SNOWFLAKE_ACCOUNT_URL: url }, 'SELECT 1'), hasCode('not_configured'));
   }
   assert.equal(fetch.mock.callCount(), 0);
-});
-
-test('insert binds nullable JSON, timestamp and embedding input', async (t) => {
-  let body: { statement: string; bindings: Record<string, { value: string }> } | undefined;
-  t.mock.method(globalThis, 'fetch', async (_input: RequestInfo | URL, init?: RequestInit) => {
-    body = JSON.parse(String(init?.body));
-    return Response.json(result(['number of rows inserted'], [['1']]));
-  });
-  await insertMemory(env, memory);
-  assert.ok(body);
-  assert.doesNotMatch(body.statement, /Sam's/);
-  assert.equal(body.bindings['2']!.value, memory.createdAt);
-  assert.equal(body.bindings['7']!.value, '["book"]');
-  for (const key of ['8', '11', '13']) assert.equal(body.bindings[key]!.value, '');
-  // AI_EMBED rejects a bound model, so the validated model id is a literal and the text is the 15th binding.
-  assert.match(body.statement, /AI_EMBED\('snowflake-arctic-embed-l-v2\.0', \?\)/);
-  assert.equal(body.bindings['16'], undefined);
-  assert.match(body.bindings['15']!.value, /COSMOS/);
-});
-
-test('embedding model ids that could break out of the SQL literal are rejected', async (t) => {
-  t.mock.method(globalThis, 'fetch', async () => { throw new Error('must not query'); });
-  await assert.rejects(insertMemory({ ...env, EMBED_MODEL: "x', 'y" } as Env, memory), (error: unknown) => error instanceof HttpError && error.code === 'not_configured');
-});
-
-test('search drops weak and relatively distant matches while preserving order', async (t) => {
-  t.mock.method(globalThis, 'fetch', async () => Response.json(result(memoryNames, [memoryRow('0.81'), memoryRow('0.70'), memoryRow('0.50')])));
-  const matches = await searchMemories(env, 'What was that book?');
-  assert.deepEqual(matches.map((match) => match.score), [0.81, 0.70]);
-});
-
-test('memory conversion validates dates, coordinates, selection and nullable JSON', () => {
-  const parsed = rowToMemory({ id: 'm', created_at: memory.createdAt, objects: '["book",null,42]',
-    selection: '{"mode":"bogus"}', lat: '999', lng: '3', place: null, note: null });
-  assert.deepEqual(parsed.objects, ['book']);
-  assert.deepEqual(parsed.selection, { mode: 'full', box: null });
-  assert.equal(parsed.location, null);
-  assert.equal(parsed.place, null);
-  assert.throws(() => rowToMemory({ created_at: 'broken date' }), hasCode('snowflake_response'));
 });
 
 test('nearby binds longitude first, escapes keywords and discards invalid coordinates', async (t) => {

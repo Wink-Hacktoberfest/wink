@@ -15,7 +15,8 @@
     "build:glasses": "node tools/build-glasses.mjs",
     "deploy": "wrangler deploy",
     "dev:real": "wrangler dev",
-    "smoke": "node test/smoke.mjs"
+    "smoke": "node test/smoke.mjs",
+    "copy:snowflake": "node --env-file-if-exists=.dev.vars --import tsx tools/copy-snowflake-memories.ts"
   },
   "devDependencies": {
     "@types/node": "26.6.5",
@@ -24,5 +25,8 @@
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "wrangler": "4.152.0"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.2.0"
   }
 }
