@@ -5,7 +5,14 @@
   "compatibility_date": "2026-10-24",
   "workers_dev": true,
   "preview_urls": false,
-  "observability": { "enabled": false },
+  // Persist console logs (provider failures, unhandled errors) in Workers Logs. Invocation logs stay off and
+  // query strings are redacted: /v1/live carries the token as ?token=, and request logs could record headers.
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": true,
+    "logs": { "invocation_logs": false }
+  },
   // The TV dashboard is static: /tv serves public/tv/index.html. The Worker always runs first for /v1/*.
   "assets": {
     "directory": "./public",
