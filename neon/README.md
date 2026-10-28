@@ -15,7 +15,7 @@ Snowflake still serves Overture Maps Places for `/v1/nearby` and business matchi
 Never paste the connection string into chat, a commit or a screenshot. It contains the password.
 
 1. **Create the project.** [console.neon.tech](https://console.neon.tech) → New project → name `wink`, the latest Postgres, a region near your users (AWS US East is closest to the Cloudflare edge for Oklahoma). The free plan is enough: 0.5 GB holds tens of thousands of memories.
-2. **Create the app role.** Project → Roles → New role → `wink_app`. Copy the password (shown once).
+2. **Create the app role.** Sidebar → Postgres database › Roles → create `wink_app`. Copy the password (shown once).
 3. **Create the schema.** SQL Editor, database `neondb`, run [`schema.sql`](schema.sql) top to bottom. It is safe to re-run.
 4. **Get the connection string.** Dashboard → Connect → role `wink_app`, database `neondb`. Copy the `postgresql://…` string.
 5. **Give it to the Worker.**

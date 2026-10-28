@@ -47,11 +47,14 @@ function failure(error: unknown, timedOut: boolean): never {
 
 /** One parameterized statement over Neon's HTTP endpoint. Never retried: a lost reply may follow a commit. */
 export async function query(env: Env, text: string, params: unknown[] = [], timeoutMs = 10_000): Promise<Row[]> {
-  const sql = neon(connectionString(env), { types: RAW_TEXT, disableWarningInBrowsers: true });
+  const sql = neon(connectionString(env), { disableWarningInBrowsers: true });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const rows: unknown = await sql.query(text, params, { fetchOptions: { signal: controller.signal, redirect: 'manual' } });
+    // `types` must be per query: the driver ignores the neon() option for single queries.
+    const rows: unknown = await sql.query(text, params, {
+      types: RAW_TEXT, fetchOptions: { signal: controller.signal, redirect: 'manual' },
+    });
     if (!Array.isArray(rows)) throw new HttpError(502, 'database_response', 'The memory database returned an invalid result.');
     return rows as Row[];
   } catch (error) {

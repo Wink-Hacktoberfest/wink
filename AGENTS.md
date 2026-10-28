@@ -120,7 +120,7 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 | PR4 TV + mobile UI redesign | Messi | ✅ | User authorized iOS UI changes; responsive light theme, functional navigation/search/ask, original rotating glasses model; see `docs/ui/README.md` |
 | M6 `/nearby` on Overture | Messi | ✅ | code detects taxonomy/categories and validates geography; actual share/category check pending |
 | M7 deploy + MOCK off | Arboy | ✅ | https://wink-api.arboydev.workers.dev, real save/ask/nearby/delete verified |
-| M9 memories on Neon | Arboy | 🟡 | code + tests on `arboy/neon-memories`; Neon project, copy and deploy pending (`neon/README.md`) |
+| M9 memories on Neon | Arboy | 🟡 | Neon project `wink` (Ohio) live, 7 memories copied + embedded, save/ask/delete verified locally with `dev:real`; deploy pending |
 | M8 CoCo screenshots | Messi | ⬜ | checklist and 04_verify.sql ready; actual Arboy account session/evidence required |
 | Demo video + Devpost | Both | ⬜ | |
 

@@ -50,6 +50,18 @@ test('queries go to the Neon HTTP endpoint with bound params and come back as ra
   assert.equal(sent[0]!.init.redirect, 'manual');
 });
 
+test('jsonb, boolean, float and timestamptz columns stay Postgres text so rows parse one way', async (t) => {
+  // Real type ids: jsonb 3802, bool 16, float8 701, timestamptz 1184. Default parsers would turn these into objects.
+  t.mock.method(globalThis, 'fetch', async () => Response.json({
+    command: 'SELECT', rowCount: 1,
+    fields: [['objects', 3802], ['selection', 3802], ['flag', 16], ['lat', 701], ['at', 1184]].map(([name, dataTypeID]) => ({ name, dataTypeID })),
+    rows: [['["book", "pen"]', '{"box": null, "mode": "full"}', 't', '35.2', '2026-10-27 03:13:17+00']],
+  }));
+  assert.deepEqual(await query(env, 'SELECT 1'), [{
+    objects: '["book", "pen"]', selection: '{"box": null, "mode": "full"}', flag: 't', lat: '35.2', at: '2026-10-27 03:13:17+00',
+  }]);
+});
+
 test('a missing or malformed DATABASE_URL is reported before any request', async (t) => {
   const fetch = t.mock.method(globalThis, 'fetch', async () => { throw new Error('must not fetch'); });
   for (const url of [undefined, '', 'not a url', 'https://ep-test.neon.tech/wink', 'postgresql://ep-test.neon.tech/wink']) {
