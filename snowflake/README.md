@@ -2,7 +2,7 @@
 
 **Verification status:** local transport and SQL-generation tests pass; no live Snowflake account was accessed. Overture schema, Cortex availability, PAT permissions, real timings and CoCo screenshots still require Arboy’s account session. Screenshots must come from the actual session; none are generated or claimed here.
 
-Snowflake holds Wink's memories (with Arctic Embed vectors for "what was that book?") and answers "where can I get this nearby?" from the free **Overture Maps Places** dataset by CARTO.
+Snowflake answers "where can I get this nearby?" from the free **Overture Maps Places** dataset by CARTO. Memories moved to Neon (see `../neon/README.md`); the `MEMORIES` table here is no longer written and is kept only as the source for `npm run copy:snowflake`.
 
 | File | What it is |
 |---|---|

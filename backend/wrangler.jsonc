@@ -34,7 +34,9 @@
     "VISION_PROVIDER": "workers-ai",
     "VISION_MODEL": "",
     "WORKERS_AI_VISION_MODEL": "@cf/mistralai/mistral-small-3.1-24b-instruct",
-    "EMBED_MODEL": "snowflake-arctic-embed-l-v2.0",
+    // Workers AI embeddings for the Neon memory store (vector(1024)).
+    "EMBED_MODEL": "@cf/baai/bge-m3",
+    // Snowflake now serves only Overture Maps Places (/v1/nearby + business matching).
     "SNOWFLAKE_ACCOUNT_URL": "https://lfuzpkj-cj15352.snowflakecomputing.com",
     "SNOWFLAKE_WAREHOUSE": "WINK_WH",
     "SNOWFLAKE_DATABASE": "WINK",
@@ -44,5 +46,5 @@
     "DEMO_LAT": "",
     "DEMO_LNG": ""
   }
-  // Secrets (never here): WINK_TOKEN, DO_MODEL_ACCESS_KEY, SNOWFLAKE_PAT. See .dev.vars.example.
+  // Secrets (never here): WINK_TOKEN, DATABASE_URL, SNOWFLAKE_PAT, DO_MODEL_ACCESS_KEY. See .dev.vars.example.
 }

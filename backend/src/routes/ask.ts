@@ -4,7 +4,7 @@ import { broadcast, mockStore } from '../live.ts';
 import { mockSearch } from '../mock.ts';
 import { ASK_SYSTEM } from '../prompts.ts';
 import { isMock } from '../parse.ts';
-import { searchMemories } from '../snowflake.ts';
+import { searchMemories } from '../neon.ts';
 import { sanitizeSpeech, timeAgo } from '../speech.ts';
 import type { StoredMemory } from '../types.ts';
 import { background, toMemory, type RouteContext } from './context.ts';

@@ -2,7 +2,7 @@
 
 Shared context for every coding agent on this repo. Codex reads this file; Claude Code reads it through `CLAUDE.md`. Edit this file, not a copy, so all agents stay in sync.
 
-Wink is smart-glasses memory for Meta Ray-Ban glasses: "Hey Wink, save this" captures what the wearer sees (cropped to what they point at or frame with their hands), and "Hey Wink, what was that book?" answers in their ear. A Cloudflare Worker stores memories in R2 + Snowflake, reasons with open-weight models on DigitalOcean, and drives a big-screen TV dashboard. Built at the Hacktoberfest 2026 mini hackathon (Hacklahoma); **projects are due 9:00 PM on 2026-10-26**, so favor working, demoable code over polish.
+Wink is smart-glasses memory for Meta Ray-Ban glasses: "Hey Wink, save this" captures what the wearer sees (cropped to what they point at or frame with their hands), and "Hey Wink, what was that book?" answers in their ear. A Cloudflare Worker stores memories in R2 + Neon Postgres, reasons with open-weight models on DigitalOcean, and drives a big-screen TV dashboard. Built at the Hacktoberfest 2026 mini hackathon (Hacklahoma); **projects are due 9:00 PM on 2026-10-26**, so favor working, demoable code over polish.
 
 - Product and scope: `PRD.md` (what to build, the cut list, the timeline, who owns what).
 - **API contract: `docs/api.md`.** Both halves build against it. Never change it unilaterally (see "Coordination").
@@ -12,8 +12,8 @@ Wink is smart-glasses memory for Meta Ray-Ban glasses: "Hey Wink, save this" cap
 
 | Person | Agent | Owns | Never edits without asking |
 |---|---|---|---|
-| **Arboy** | Claude Code | `ios/` (glasses, voice, gestures, iOS UI) | `backend/`, `snowflake/` |
-| **Messi** | Codex | `backend/` (Worker + `public/tv/` dashboard), `snowflake/` | `ios/` |
+| **Arboy** | Claude Code | `ios/` (glasses, voice, gestures, iOS UI) | `backend/`, `neon/`, `snowflake/` |
+| **Messi** | Codex | `backend/` (Worker + `public/tv/` dashboard), `neon/`, `snowflake/` | `ios/` |
 | Both | — | `docs/api.md`, `PRD.md`, `AGENTS.md`, `README.md`, `demo/` | — |
 
 If your task needs a change in the other person's folder, stop and write it down as a request in "Handoffs" below instead of editing their code.
@@ -30,7 +30,8 @@ wink/
 ├── demo/DEMO.md         # 3-minute demo script + table staging
 ├── ios/                 # SwiftUI app (XcodeGen project.yml → Wink.xcodeproj, CocoaPods → Wink.xcworkspace)
 ├── backend/             # Cloudflare Worker `wink-api` (TypeScript), Durable Object LiveRoom, R2, TV page in public/tv/
-└── snowflake/           # setup SQL, Overture exploration, the app's queries, CoCo checklist
+├── neon/                # memory store: Postgres + pgvector schema, setup runbook
+└── snowflake/           # Overture Places setup + exploration, the nearby queries, CoCo checklist
 ```
 
 ## Stack and open models
@@ -39,7 +40,8 @@ wink/
 - **On-device AI (iOS):** WhisperKit (`argmaxinc/argmax-oss-swift`, exact 1.1.1, Whisper `base.en`) for the "Hey Wink" wake word and commands; MediaPipe Hand Landmarker (CocoaPods `MediaPipeTasksVision`, model `hand_landmarker.task`) for gestures; AVSpeechSynthesizer for replies.
 - **Backend:** Cloudflare Workers + Durable Objects (WebSocket Hibernation API) + R2 + static assets.
 - **Inference:** Cloudflare Workers AI through the `AI` binding (no key needed): `@cf/openai/gpt-oss-120b` for answers and speech (`CHAT_PROVIDER=workers-ai`), `@cf/mistralai/mistral-small-3.1-24b-instruct` for images (`VISION_PROVIDER=workers-ai`), `@cf/deepgram/aura-2-en` for the spoken reply (`POST /v1/speak`; ElevenLabs instead when `ELEVENLABS_API_KEY` is set). Both are verified live on Arboy's account and return OpenAI `chat.completion` objects; gpt-oss keeps its reasoning in a separate field. DigitalOcean Gradient (`https://inference.do-ai.run/v1`) remains supported by setting both providers to `digitalocean` + `DO_MODEL_ACCESS_KEY`, but DigitalOcean requires a card on file, so it is off. Fallback vision: Workers AI `@cf/meta/llama-3.2-11b-vision-instruct`.
-- **Data:** Snowflake SQL API v2 with a programmatic access token. `WINK.APP.MEMORIES` holds memories with `VECTOR(FLOAT,1024)` from `AI_EMBED('snowflake-arctic-embed-l-v2.0', …)`, searched with `VECTOR_COSINE_SIMILARITY`. The free dataset is **Overture Maps Places** (CARTO listing on the Snowflake Marketplace), table configured by `OVERTURE_PLACES_TABLE`.
+- **Memories:** Neon Postgres over HTTP (`@neondatabase/serverless`, secret `DATABASE_URL`). Table `memories` with `vector(1024)` from Workers AI `@cf/baai/bge-m3`, searched with pgvector cosine distance (`<=>`). Schema and setup in `neon/`.
+- **Places:** Snowflake SQL API v2 with a programmatic access token, only for **Overture Maps Places** (CARTO listing on the Snowflake Marketplace), table configured by `OVERTURE_PLACES_TABLE`. The old `WINK.APP.MEMORIES` table is read once by `npm run copy:snowflake`.
 
 ## Running things
 
@@ -49,7 +51,7 @@ cd backend && npm ci && npm run check && npm run build
 npm run dev -- --ip 0.0.0.0     # phone on the same Wi-Fi uses http://<mac-lan-ip>:8787
 ```
 - `npm run dev` uses `wrangler.mock.jsonc` with `MOCK=true` and no remote AI binding, so iOS and the TV work with no keys or cloud account. `npm run dev:real` uses `wrangler.jsonc` for Arboy’s provider verification. `npm run smoke` checks a running MOCK server through HTTP + real WebSockets.
-- Secrets live only in ignored `.dev.vars` locally or `wrangler secret put` when deployed: `WINK_TOKEN`, `SNOWFLAKE_PAT` (and `DO_MODEL_ACCESS_KEY` only if switching back to DigitalOcean). Never commit keys.
+- Secrets live only in ignored `.dev.vars` locally or `wrangler secret put` when deployed: `WINK_TOKEN`, `DATABASE_URL`, `SNOWFLAKE_PAT` (and `DO_MODEL_ACCESS_KEY` only if switching back to DigitalOcean). Never commit keys.
 - Workers' `fetch` rejects `redirect: 'error'`; use `redirect: 'manual'` for provider calls.
 - TV: open `/tv?token=<WINK_TOKEN>` on the projector laptop.
 - Backend-only changes don't need an iOS build.
@@ -119,12 +121,15 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 | PR4 TV + mobile UI redesign | Messi | ✅ | User authorized iOS UI changes; responsive light theme, functional navigation/search/ask, original rotating glasses model; see `docs/ui/README.md` |
 | M6 `/nearby` on Overture | Messi | ✅ | code detects taxonomy/categories and validates geography; actual share/category check pending |
 | M7 deploy + MOCK off | Arboy | ✅ | https://wink-api.arboydev.workers.dev, real save/ask/nearby/delete verified |
+| M9 memories on Neon | Arboy | 🟡 | Neon project `wink` (Ohio) live, 7 memories copied + embedded, save/ask/delete verified locally with `dev:real`; deploy pending |
 | M8 CoCo screenshots | Messi | ⬜ | checklist and 04_verify.sql ready; actual Arboy account session/evidence required |
 | Demo video + Devpost | Both | 🟡 | 30-second video in `demo/video/` (commit `68ebef2`) is on `arboy/ios-ui-polish`, not on `main` |
 
 ## Handoffs
 
 Newest first. Format: `HH:MM from → to: message`.
+
+- 2026-10-27 Arboy → Messi: memories moved from Snowflake to **Neon Postgres + pgvector** (branch `arboy/neon-memories`; Arboy asked for it, so I edited `backend/`). `src/neon.ts` owns every memory query; `src/snowflake.ts` keeps only Overture places. Embeddings are Workers AI `@cf/baai/bge-m3` (1024-d), computed in the Worker; a save whose embedding fails is still stored and `GET /v1/memories` backfills it. `ASK_MIN_SCORE` is now 0.40 with a 0.08 relative gap (from a small BGE-M3 test). API contract unchanged; MOCK unchanged. New secret `DATABASE_URL`; schema and runbook in `neon/`.
 
 - 23:50 Arboy → Messi: glasses work from tonight is on `main` (PRs #5–#8), running on Arboy's iPhone 15 Pro Max with the glasses streaming:
   - **Signing:** Hotspot Configuration and Access Wi-Fi Information entitlements are gone; only the keychain group remains, so a personal team can sign.
@@ -174,6 +179,7 @@ Newest first. Format: `HH:MM from → to: message`.
 
 - 19:55: inference moved to Cloudflare Workers AI (same gpt-oss-120b, Mistral Small 3.1 for vision) because DigitalOcean requires a card on file. The Best Open-Source AI prize only requires open-weight AI.
 
-- Memory search queries the `VECTOR` column directly, not Cortex Search, because Cortex Search's refresh lag would hide just-saved memories.
+- 2026-10-27: memories moved to Neon (Postgres + pgvector) after the hackathon. One ordinary database is easier to inspect, export and run per-user queries on than Snowflake (warehouse cold starts, expiring PATs, credit cost) or per-user Durable Objects. Snowflake stays for Overture places until nearby has a replacement.
+- Memory search queries the vector column directly (now pgvector; before that, not Cortex Search, whose refresh lag would hide just-saved memories).
 - The demo build captures only on request (voice or gesture). Passive capture is on the cut list.
 - The iOS project is generated by XcodeGen; both `project.yml` and the generated project are committed so it opens without XcodeGen.

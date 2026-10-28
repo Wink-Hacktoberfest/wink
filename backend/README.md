@@ -1,13 +1,14 @@
 # Wink backend (`wink-api`)
 
-Cloudflare Worker for Wink: stores memories (R2 images + Snowflake rows with Arctic Embed vectors), describes images with an open vision model, answers with `gpt-oss-120b` on Cloudflare Workers AI (DigitalOcean Gradient optional), finds nearby places in Overture Maps Places, and drives the TV dashboard over a Durable Object WebSocket room. The API contract is [`../docs/api.md`](../docs/api.md).
+Cloudflare Worker for Wink: stores memories (R2 images + Neon Postgres rows with BGE-M3 vectors from Workers AI), describes images with an open vision model, answers with `gpt-oss-120b` on Cloudflare Workers AI (DigitalOcean Gradient optional), finds nearby places in Overture Maps Places on Snowflake, and drives the TV dashboard over a Durable Object WebSocket room. The API contract is [`../docs/api.md`](../docs/api.md).
 
 ```
 src/index.ts        router, bearer auth, CORS, JSON errors      src/live.ts       LiveRoom DO (WebSocket Hibernation) + MOCK store
 src/events.ts       validates phone events and normalized coordinates
 src/routes/*.ts     memories, glance, ask, nearby, images/events src/inference.ts  Workers AI or DigitalOcean chat/vision
-src/snowflake.ts    SQL API v2 client + all queries              src/speech.ts     speech sanitizer (≤ 25 words, no markdown/emoji/URLs)
-src/mock.ts         canned memories, places, placeholder art     src/prompts.ts    model prompts
+src/neon.ts         memory store: Neon HTTP queries + pgvector   src/speech.ts     speech sanitizer (≤ 25 words, no markdown/emoji/URLs)
+src/snowflake.ts    SQL API v2 client + Overture places queries  src/prompts.ts    model prompts
+src/mock.ts         canned memories, places, placeholder art
 public/tv/          the big-screen dashboard (/tv)
 ```
 
@@ -34,9 +35,10 @@ Copy `.dev.vars.example` to `.dev.vars` (git-ignored) and fill:
 |---|---|
 | `WINK_TOKEN` | Shared bearer token for iOS and the TV (`openssl rand -hex 24`). Required when `MOCK=false`. |
 | `DO_MODEL_ACCESS_KEY` | DigitalOcean → Agent Platform / Gradient → Serverless inference → Model access keys |
-| `SNOWFLAKE_PAT` | Programmatic access token for `WINK_SVC` (see `../snowflake/README.md`) |
+| `DATABASE_URL` | Neon connection string for the `wink_app` role (see `../neon/README.md`) |
+| `SNOWFLAKE_PAT` | Programmatic access token for `WINK_SVC`, used only for Overture places (see `../snowflake/README.md`) |
 
-Deployed: `npx wrangler secret put WINK_TOKEN` (and the other two).
+Deployed: `npx wrangler secret put WINK_TOKEN` (and the others).
 
 ## Pick the DigitalOcean vision model
 
@@ -62,7 +64,7 @@ The deploy prints `https://wink-api.<subdomain>.workers.dev`; share it in AGENTS
 
 ## Switching MOCK off
 
-1. Snowflake set up per `../snowflake/README.md`; `SNOWFLAKE_ACCOUNT_URL` set in `wrangler.jsonc`.
+1. Neon set up per `../neon/README.md`, and Snowflake (Overture places) per `../snowflake/README.md` with `SNOWFLAKE_ACCOUNT_URL` set in `wrangler.jsonc`.
 2. `VISION_MODEL` chosen (or leave empty for Workers AI).
 3. Secrets set (`.dev.vars` locally, `wrangler secret put` deployed).
 4. `"MOCK": "false"` in `wrangler.jsonc`, then use `npm run dev:real` locally / redeploy. This is Arboy’s account setup step; the default `npm run dev` stays a local MOCK workflow.
@@ -74,10 +76,12 @@ The deploy prints `https://wink-api.<subdomain>.workers.dev`; share it in AGENTS
 
 - `/v1/live?token=…&role=tv|glasses`: glasses messages are relayed to TV sockets only; route events go to everyone. Send the text `ping` to get `pong` without waking the DO.
 - Saved image responses use `Cache-Control: no-store`, so a successful forget cannot leave an immutable browser-cached image. R2 deletion must succeed before the row is removed; retrying a failed deletion is safe.
-- Images are cleaned up after a definite rejected INSERT. A transport or polling failure may follow a committed INSERT, so its image is retained for reconciliation rather than breaking a saved memory. No SQL writes are automatically retried.
+- Images are cleaned up after a definite rejected INSERT (Postgres answered with an error). A timeout or transport failure may follow a committed INSERT, so its image is retained for reconciliation rather than breaking a saved memory. No SQL writes are automatically retried.
 - Client WebSocket events are validated; forged `memory.*`/answer events are discarded. Pointer/frame traffic is capped at 20/2 messages per second per socket, including hibernation.
-- Snowflake bindings are all `TEXT`; vectors are computed inline with `AI_EMBED` (see `../snowflake/03_app_queries.sql`).
-- `/v1/ask` drops matches below cosine 0.30 (tune `ASK_MIN_SCORE` in `src/snowflake.ts` after a few real memories).
+- Embeddings come from Workers AI (`EMBED_MODEL`, default `@cf/baai/bge-m3`). A save whose embedding fails is stored without a vector; `GET /v1/memories` backfills up to 20 such rows in the background.
+- `/v1/ask` drops matches below cosine 0.40 or more than 0.08 below the best one (tune `ASK_MIN_SCORE` / `ASK_RELATIVE_GAP` in `src/neon.ts` after a few real memories).
+- `npm run copy:snowflake` copies the old Snowflake `MEMORIES` rows into Neon once (see `../neon/README.md`).
+- Snowflake bindings are all `TEXT` (see `../snowflake/03_app_queries.sql`).
 - Debug the TV from the browser console: `wink.handle({ type: 'pointer', x: 0.5, y: 0.5, pinching: true })`.
 
 ## Verification status
