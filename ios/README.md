@@ -34,12 +34,12 @@ Both reach the app through Info.plist (`WinkAPIBaseURL`, `WinkToken`). The **Set
 
 The glasses, the camera and Bluetooth audio only work on a physical iPhone. The simulator only proves the app builds (and runs the unit tests).
 
-1. **Signing:** team `BW3XQ8353L`, bundle id `com.arboymagomba.Wink`, automatic signing. The entitlements (`Wink/Wink.entitlements`) copy Meta's CameraAccess sample: keychain group, Hotspot Configuration and Access Wi-Fi Information. Xcode adds those capabilities to the App ID on the first device build.
+1. **Signing:** team `BW3XQ8353L`, bundle id `com.arboymagomba.Wink`, automatic signing. The entitlements (`Wink/Wink.entitlements`) hold only the keychain group. Meta's CameraAccess sample also adds Hotspot Configuration and Access Wi-Fi Information, but a personal team can't sign those and Wink doesn't need them.
 2. **Meta AI app:** install it on the iPhone, pair the glasses, then turn on **Developer Mode** (Meta AI > Settings > your glasses > Developer Mode). In Developer Mode `MetaAppID` can stay `0` (set in `Config/Wink.xcconfig`), so you don't need a Wearables Developer Center app.
 3. Run Wink on the phone and allow microphone, camera and location access.
 4. Tap **Register** (or Settings > Register with Meta AI). Meta AI opens; approve Wink, and it calls back to `wink://` (handled in `WinkApp.onOpenURL`).
 5. Tap **Connect**. The first time, Meta AI asks for glasses camera permission (pick "Allow always"). The preview switches to the glasses POV.
-6. The glasses' Bluetooth audio (HFP) should become the mic and speaker. Settings shows the current route. Speech is spoken through whatever route is active.
+6. The glasses' Bluetooth audio (HFP) becomes the mic and speaker. While the glasses camera streams, Wink listens on the iPhone mic instead, because the camera and HFP share one Bluetooth Classic link. Settings shows the current route. Replies use the backend's Aura-2 voice (`POST /v1/speak`), falling back to the built-in voice, through whatever output route is active.
 7. The first launch downloads Whisper `base.en` (~150 MB) from Hugging Face. The status line shows progress. Wait for "Whisper ready" before saying "Hey Wink".
 
 No glasses? Keep the camera toggle on **Phone** (back camera). In Debug builds, Settings > **Enable mock glasses** uses MockDeviceKit to simulate a pair of glasses streaming the phone camera.

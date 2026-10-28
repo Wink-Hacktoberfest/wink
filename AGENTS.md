@@ -39,7 +39,7 @@ wink/
 - **Glasses:** Meta Wearables Device Access Toolkit (`facebook/meta-wearables-dat-ios`, SPM; `MWDATCore`, `MWDATCamera`). Camera stream ≤ 720p/30fps over Bluetooth. Mic and speakers go through normal Bluetooth audio (HFP). No access to "Hey Meta" and no drawing on the Display HUD.
 - **On-device AI (iOS):** WhisperKit (`argmaxinc/argmax-oss-swift`, exact 1.1.1, Whisper `base.en`) for the "Hey Wink" wake word and commands; MediaPipe Hand Landmarker (CocoaPods `MediaPipeTasksVision`, model `hand_landmarker.task`) for gestures; AVSpeechSynthesizer for replies.
 - **Backend:** Cloudflare Workers + Durable Objects (WebSocket Hibernation API) + R2 + static assets.
-- **Inference:** Cloudflare Workers AI through the `AI` binding (no key needed): `@cf/openai/gpt-oss-120b` for answers and speech (`CHAT_PROVIDER=workers-ai`), `@cf/mistralai/mistral-small-3.1-24b-instruct` for images (`VISION_PROVIDER=workers-ai`). Both are verified live on Arboy's account and return OpenAI `chat.completion` objects; gpt-oss keeps its reasoning in a separate field. DigitalOcean Gradient (`https://inference.do-ai.run/v1`) remains supported by setting both providers to `digitalocean` + `DO_MODEL_ACCESS_KEY`, but DigitalOcean requires a card on file, so it is off. Fallback vision: Workers AI `@cf/meta/llama-3.2-11b-vision-instruct`.
+- **Inference:** Cloudflare Workers AI through the `AI` binding (no key needed): `@cf/openai/gpt-oss-120b` for answers and speech (`CHAT_PROVIDER=workers-ai`), `@cf/mistralai/mistral-small-3.1-24b-instruct` for images (`VISION_PROVIDER=workers-ai`), `@cf/deepgram/aura-2-en` for the spoken reply (`POST /v1/speak`; ElevenLabs instead when `ELEVENLABS_API_KEY` is set). Both are verified live on Arboy's account and return OpenAI `chat.completion` objects; gpt-oss keeps its reasoning in a separate field. DigitalOcean Gradient (`https://inference.do-ai.run/v1`) remains supported by setting both providers to `digitalocean` + `DO_MODEL_ACCESS_KEY`, but DigitalOcean requires a card on file, so it is off. Fallback vision: Workers AI `@cf/meta/llama-3.2-11b-vision-instruct`.
 - **Memories:** Neon Postgres over HTTP (`@neondatabase/serverless`, secret `DATABASE_URL`). Table `memories` with `vector(1024)` from Workers AI `@cf/baai/bge-m3`, searched with pgvector cosine distance (`<=>`). Schema and setup in `neon/`.
 - **Places:** Snowflake SQL API v2 with a programmatic access token, only for **Overture Maps Places** (CARTO listing on the Snowflake Marketplace), table configured by `OVERTURE_PLACES_TABLE`. The old `WINK.APP.MEMORIES` table is read once by `npm run copy:snowflake`.
 
@@ -105,13 +105,14 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 | Repo, PRD, contract, agent docs | Arboy | ✅ | 2026-10-26 18:55 |
 | Backend scaffold (routes, MOCK, LiveRoom, TV, Snowflake SQL) | Messi | ✅ | MOCK end to end; real DO/Snowflake calls untested |
 | iOS scaffold (XcodeGen, WhisperKit, DAT, MediaPipe) | Arboy | ✅ | builds; 9 unit tests pass; ran in simulator against MOCK |
-| A1 glasses camera stream | Arboy | 🟡 | code written, untested on glasses (`TODO(glasses)`), check frame orientation |
-| A2 wake word + push-to-talk | Arboy | 🟡 | code written; Whisper base.en loads; voice loop untested on device |
+| A1 glasses camera stream | Arboy | ✅ | streams on Arboy's iPhone 15 Pro Max at `.low`/24 fps; session errors surfaced, stale sessions torn down, pixel-buffer frames converted. Frame orientation still untuned on real footage |
+| A2 wake word + push-to-talk | Arboy | ✅ | works on device. Mic restarts on route changes on a fresh `AVAudioEngine`; uses the iPhone mic while the glasses camera streams (camera and HFP share one Bluetooth Classic link). "can you save this" phrasings count as saves |
 | A3 intents → API | Arboy | ✅ | every route verified against MOCK |
-| A4 speech into glasses | Arboy | 🟡 | HFP routing untested on device |
-| A5 gestures + selection crop | Arboy | 🟡 | thresholds tuned on synthetic hands only; tune on real footage |
+| A4 speech into glasses | Arboy | ✅ | replies use the Aura-2 voice from `POST /v1/speak` (ElevenLabs if `ELEVENLABS_API_KEY` is set), built-in voice as fallback |
+| A5 gestures + selection crop | Arboy | 🟡 | thresholds tuned on synthetic hands only; tune on real glasses footage |
 | A6 live socket events / pointer | Arboy | ✅ | socket connects; flick only sends the event, TV decides what to delete |
 | A8 keys (Snowflake PAT, R2, token) | Arboy | ✅ | R2, WINK_TOKEN, Snowflake setup + PAT (WINK_SVC, 7-day) done |
+| A9 device signing + app logo | Arboy | ✅ | Hotspot/Wi-Fi entitlements dropped so a personal team signs; winking-glasses logo is the app icon, in-app header, and TV header + favicon |
 | M1 provider reliability | Messi | ✅ | bounded calls, final-only chat, Workers AI fallback; tested with stubbed providers |
 | M2 `/memories` real | Messi | ✅ | code + real-route transport tests; R2 cleanup and retryable deletion; live account check pending |
 | M3 `/ask` real | Messi | ✅ | vector retrieval + grounded chat/fallback; live provider check pending |
@@ -122,13 +123,21 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 | M7 deploy + MOCK off | Arboy | ✅ | https://wink-api.arboydev.workers.dev, real save/ask/nearby/delete verified |
 | M9 memories on Neon | Arboy | 🟡 | Neon project `wink` (Ohio) live, 7 memories copied + embedded, save/ask/delete verified locally with `dev:real`; deploy pending |
 | M8 CoCo screenshots | Messi | ⬜ | checklist and 04_verify.sql ready; actual Arboy account session/evidence required |
-| Demo video + Devpost | Both | ⬜ | |
+| Demo video + Devpost | Both | 🟡 | 30-second video in `demo/video/` (commit `68ebef2`) is on `arboy/ios-ui-polish`, not on `main` |
 
 ## Handoffs
 
 Newest first. Format: `HH:MM from → to: message`.
 
 - 2026-10-27 Arboy → Messi: memories moved from Snowflake to **Neon Postgres + pgvector** (branch `arboy/neon-memories`; Arboy asked for it, so I edited `backend/`). `src/neon.ts` owns every memory query; `src/snowflake.ts` keeps only Overture places. Embeddings are Workers AI `@cf/baai/bge-m3` (1024-d), computed in the Worker; a save whose embedding fails is still stored and `GET /v1/memories` backfills it. `ASK_MIN_SCORE` is now 0.40 with a 0.08 relative gap (from a small BGE-M3 test). API contract unchanged; MOCK unchanged. New secret `DATABASE_URL`; schema and runbook in `neon/`.
+
+- 23:50 Arboy → Messi: glasses work from tonight is on `main` (PRs #5–#8), running on Arboy's iPhone 15 Pro Max with the glasses streaming:
+  - **Signing:** Hotspot Configuration and Access Wi-Fi Information entitlements are gone; only the keychain group remains, so a personal team can sign.
+  - **Voice:** "can you save this" and similar phrasings count as saves. Replies are spoken with Aura-2 from `POST /v1/speak` (contract v1.1). The mic restarts on route changes on a fresh `AVAudioEngine`.
+  - **Bluetooth:** the glasses camera and the glasses' HFP mic share one Bluetooth Classic link, so Wink listens on the iPhone mic while the glasses camera streams.
+  - **Glasses camera:** session errors are surfaced, stale sessions torn down, pixel-buffer frames converted; streams at `.low`/24 fps. Frame orientation and gesture thresholds are still untuned on real footage.
+  - **Logo:** the winking-glasses logo is the app icon, the in-app header, and the TV header and favicon (`backend/public/tv/logo.png`).
+  - The 30-second demo video (`68ebef2`, `demo/video/`) is on `arboy/ios-ui-polish` and not merged to `main`.
 
 - 20:28 Messi → Arboy: PR4 visual refinement rebuilds glasses with smooth thin acetate geometry/PBR lighting, bundles OFL Manrope on web/iOS, tightens reference-inspired layouts and adds reduced-motion-aware transitions. Four generated MOCK-only photographs replace sample SVGs (uploaded images unchanged); versioned sample URLs retire cached artwork. Native build + 9 tests, backend typecheck + 74 tests and local smoke pass. Screenshots and asset prompts updated under `docs/ui/`.
 
