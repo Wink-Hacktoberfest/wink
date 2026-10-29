@@ -122,7 +122,7 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 | PR4 TV + mobile UI redesign | Messi | ✅ | User authorized iOS UI changes; responsive light theme, functional navigation/search/ask, original rotating glasses model; see `docs/ui/README.md` |
 | M6 `/nearby` on Overture | Messi | ✅ | code detects taxonomy/categories and validates geography; actual share/category check pending |
 | M7 deploy + MOCK off | Arboy | ✅ | https://wink-api.arboydev.workers.dev, real save/ask/nearby/delete verified |
-| M9 memories on Neon | Arboy | 🟡 | deployed 2026-10-28 (PR #15), 7 real memories in Neon project `wink` (Ohio), `/v1/health` reports `embed: @cf/baai/bge-m3`; phone check pending |
+| M9 memories on Neon | Arboy | ✅ | deployed 2026-10-28 (PR #15), Neon project `wink` (Ohio), `/v1/health` reports `embed: @cf/baai/bge-m3`; phone check passed 2026-10-29 (save, "what was that?", older memory, forget) |
 | M10 `/ask` tuned on real memories | Arboy | ✅ | PR #16: lead-over-runner-up rule + newest memory for "what did I just save?"; scores in `neon/README.md`; live after the next deploy |
 | P0 Worker logs, query strings redacted | Arboy | ✅ | PR #10: Workers Logs on, invocation logs off; live after the next deploy |
 | P0 TV camera preview opt-in | Arboy | ✅ | PR #11: off by default, never sent while paused |
@@ -135,6 +135,8 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 ## Handoffs
 
 Newest first. Format: `HH:MM from → to: message`.
+
+- 2026-10-29 Arboy → Messi: **M9 is done.** The phone check passed on the deployed Worker: save, "what was that?", an older memory (the Sooners shirt) and "forget that". "What was that?" names nothing to search for, so `routes/ask.ts` now answers it with the newest memory (`VAGUE_QUESTION`, PR #18, deployed); MOCK does the same. Snowflake now serves only places; its PAT expires around 2026-11-02 (rotation in `docs/runbooks/snowflake-pat-rotation.md`).
 
 - 2026-10-28 Arboy → Messi: what changed in `backend/` since your last pass (Arboy asked me to make these changes, so I edited your folder). The API contract and MOCK are unchanged.
   - **Neon (PR #15, deployed 2026-10-28).** Memories live in Neon Postgres + pgvector; `src/neon.ts` holds every memory query. `src/snowflake.ts` keeps only Overture places (`/v1/nearby` and the business match on save). Embeddings are Workers AI `@cf/baai/bge-m3`. The secret is `DATABASE_URL`; the schema and runbook are in `neon/`.
