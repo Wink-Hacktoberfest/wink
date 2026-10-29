@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, mock, test } from 'node:test';
 import worker, { LiveRoom } from '../src/index.ts';
-import { RECENT_QUESTION } from '../src/routes/ask.ts';
+import { RECENT_QUESTION, VAGUE_QUESTION } from '../src/routes/ask.ts';
 import type { Env, LiveEvent } from '../src/types.ts';
 
 const ORIGIN = 'https://wink-api.example';
@@ -166,6 +166,8 @@ test('mock: save → list → ask → nearby → delete, broadcasting each step'
   assert.equal(answer.memories[0]?.id, memory.id);
   assert.match(answer.speech, /Malbec/);
   assert.equal(sent.at(-1)?.type, 'answer');
+  const vague = await (await call(env, 'POST', '/v1/ask', { question: 'What was that?', location: null })).json() as { memories: Array<{ id: string }> };
+  assert.deepEqual(vague.memories.map((m) => m.id), [memory.id]);
 
   const none = await (await call(env, 'POST', '/v1/ask', { question: 'where is my passport?', location: null })).json() as { speech: string; memories: unknown[] };
   assert.equal(none.memories.length, 0);
@@ -312,6 +314,33 @@ test('real ask adds the newest memory when the question is about the last save',
   queries.length = 0;
   await call(env, 'POST', '/v1/ask', { question: 'what was that shirt?' });
   assert.equal(queries.some((q) => q.includes('ORDER BY created_at DESC')), false);
+});
+
+test('real "what was that?" answers with the newest memory without searching or chatting', async () => {
+  const { env } = realEnvironment();
+  const newest = { id: 'newest', created_at: '2026-10-29T00:29:44.000Z', title: 'Bedside table with lamp', objects: '["lamp"]' };
+  const queries: string[] = [];
+  let chats = 0;
+  mock.method(globalThis, 'fetch', async (input: string, init: RequestInit) => {
+    if (input.startsWith('https://inference.do-ai.run/')) { chats += 1; return new Response('unexpected', { status: 500 }); }
+    queries.push((JSON.parse(String(init.body)) as { query: string }).query);
+    return sqlResult([newest]);
+  });
+  const answer = await (await call(env, 'POST', '/v1/ask', { question: 'What was that?' })).json() as { speech: string; memories: Array<{ id: string }> };
+  assert.deepEqual(answer.memories.map((m) => m.id), ['newest']);
+  assert.match(answer.speech, /^That was Bedside table with lamp\. You saved it /);
+  assert.equal(queries.length, 1);
+  assert.match(queries[0]!, /ORDER BY created_at DESC/);
+  assert.equal(chats, 0);
+});
+
+test('vague "what was that?" questions are recognised without catching specific ones', () => {
+  for (const q of ['What was that?', 'what was that', "what's that?", 'What is this?', 'who was that?', 'what was it again?', 'Hey Wink, what was that?']) {
+    assert.match(q, VAGUE_QUESTION, q);
+  }
+  for (const q of ['what was that book?', 'what was that shirt again?', 'where was that?', 'what did I just save?', 'what was that place called']) {
+    assert.doesNotMatch(q, VAGUE_QUESTION, q);
+  }
 });
 
 test('recent-save questions are recognised without catching ordinary ones', () => {

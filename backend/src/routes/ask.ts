@@ -13,6 +13,8 @@ export const NO_MATCH_SPEECH = "I don't have a memory of that yet.";
 
 /** "What did I just save?" is about time, which the embeddings don't capture, so it also gets the newest memory. */
 export const RECENT_QUESTION = /\b(just|last|latest|most recent(ly)?)\b.*\b(sav(e|ed)|captur(e|ed))\b/i;
+/** "What was that?" names nothing to search for. Right after a save it means that save, so it gets only the newest memory. */
+export const VAGUE_QUESTION = /^\s*(hey wink[,.]?\s+)?(what|who)(\s+(was|is)|'s)\s+(that|this|it)(\s+again)?\s*[?.!]*\s*$/i;
 
 export function templateAnswer(m: StoredMemory, now = Date.now()): string {
   const when = timeAgo(m.createdAt, now);
@@ -38,11 +40,16 @@ export async function ask({ request, env, ctx, url }: RouteContext): Promise<Res
   const question = typeof body.question === 'string' ? body.question.trim().slice(0, 500) : '';
   if (!question) throw new HttpError(400, 'missing_question', 'question is required.');
 
+  const vague = VAGUE_QUESTION.test(question);
   let matches: StoredMemory[];
   let speech: string;
   if (isMock(env)) {
     const { memories } = await mockStore<{ memories: StoredMemory[] }>(env, 'GET');
-    matches = mockSearch(memories, question);
+    const newest = [...memories].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 1);
+    matches = vague ? newest : mockSearch(memories, question);
+    speech = matches[0] ? templateAnswer(matches[0]) : NO_MATCH_SPEECH;
+  } else if (vague) {
+    matches = await listMemories(env, 1);
     speech = matches[0] ? templateAnswer(matches[0]) : NO_MATCH_SPEECH;
   } else {
     const [found, latest] = await Promise.all([
