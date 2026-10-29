@@ -2,7 +2,7 @@
 
 Shared context for every coding agent on this repo. Codex reads this file; Claude Code reads it through `CLAUDE.md`. Edit this file, not a copy, so all agents stay in sync.
 
-Wink is smart-glasses memory for Meta Ray-Ban glasses: "Hey Wink, save this" captures what the wearer sees (cropped to what they point at or frame with their hands), and "Hey Wink, what was that book?" answers in their ear. A Cloudflare Worker stores memories in R2 + Neon Postgres, reasons with open-weight models on DigitalOcean, and drives a big-screen TV dashboard. Built at the Hacktoberfest 2026 mini hackathon (Hacklahoma); **projects are due 9:00 PM on 2026-10-26**, so favor working, demoable code over polish.
+Wink is smart-glasses memory for Meta Ray-Ban glasses: "Hey Wink, save this" captures what the wearer sees (cropped to what they point at or frame with their hands), and "Hey Wink, what was that book?" answers in their ear. A Cloudflare Worker stores memories in R2 + Neon Postgres, reasons with open-weight models on Cloudflare Workers AI, and drives a big-screen TV dashboard. Built at the Hacktoberfest 2026 mini hackathon (Hacklahoma); **projects are due 9:00 PM on 2026-10-26**, so favor working, demoable code over polish.
 
 - Product and scope: `PRD.md` (what to build, the cut list, the timeline, who owns what).
 - **API contract: `docs/api.md`.** Both halves build against it. Never change it unilaterally (see "Coordination").
@@ -55,6 +55,7 @@ npm run dev -- --ip 0.0.0.0     # phone on the same Wi-Fi uses http://<mac-lan-i
 - Workers' `fetch` rejects `redirect: 'error'`; use `redirect: 'manual'` for provider calls.
 - TV: open `/tv?token=<WINK_TOKEN>` on the projector laptop.
 - Backend-only changes don't need an iOS build.
+- CI (`.github/workflows/ci.yml`) runs the backend check, build and MOCK smoke plus the iOS build and unit tests on every PR and every push to `main`. Keep it green.
 
 ### iOS (`ios/`)
 ```bash
@@ -121,13 +122,27 @@ Update one line per item: `✅ done` / `🟡 in progress` / `⬜ not started` / 
 | PR4 TV + mobile UI redesign | Messi | ✅ | User authorized iOS UI changes; responsive light theme, functional navigation/search/ask, original rotating glasses model; see `docs/ui/README.md` |
 | M6 `/nearby` on Overture | Messi | ✅ | code detects taxonomy/categories and validates geography; actual share/category check pending |
 | M7 deploy + MOCK off | Arboy | ✅ | https://wink-api.arboydev.workers.dev, real save/ask/nearby/delete verified |
-| M9 memories on Neon | Arboy | 🟡 | Neon project `wink` (Ohio) live, 7 memories copied + embedded, save/ask/delete verified locally with `dev:real`; deploy pending |
+| M9 memories on Neon | Arboy | 🟡 | deployed 2026-10-28 (PR #15), 7 real memories in Neon project `wink` (Ohio), `/v1/health` reports `embed: @cf/baai/bge-m3`; phone check pending |
+| M10 `/ask` tuned on real memories | Arboy | ✅ | PR #16: lead-over-runner-up rule + newest memory for "what did I just save?"; scores in `neon/README.md`; live after the next deploy |
+| P0 Worker logs, query strings redacted | Arboy | ✅ | PR #10: Workers Logs on, invocation logs off; live after the next deploy |
+| P0 TV camera preview opt-in | Arboy | ✅ | PR #11: off by default, never sent while paused |
+| P0 release ATS | Arboy | ✅ | PR #12: `NSAllowsArbitraryLoads` removed, local networking still allowed |
+| P0 CI | Arboy | ✅ | PR #13: backend check/build/MOCK smoke + iOS build and tests on every PR and push to `main` |
+| P0 Snowflake PAT runbook | Arboy | 🟡 | PR #14: `docs/runbooks/snowflake-pat-rotation.md`; the rotation itself is due before ~2026-11-02 |
 | M8 CoCo screenshots | Messi | ⬜ | checklist and 04_verify.sql ready; actual Arboy account session/evidence required |
 | Demo video + Devpost | Both | 🟡 | 30-second video in `demo/video/` (commit `68ebef2`) is on `arboy/ios-ui-polish`, not on `main` |
 
 ## Handoffs
 
 Newest first. Format: `HH:MM from → to: message`.
+
+- 2026-10-28 Arboy → Messi: what changed in `backend/` since your last pass (Arboy asked me to make these changes, so I edited your folder). The API contract and MOCK are unchanged.
+  - **Neon (PR #15, deployed 2026-10-28).** Memories live in Neon Postgres + pgvector; `src/neon.ts` holds every memory query. `src/snowflake.ts` keeps only Overture places (`/v1/nearby` and the business match on save). Embeddings are Workers AI `@cf/baai/bge-m3`. The secret is `DATABASE_URL`; the schema and runbook are in `neon/`.
+  - **Logs (PR #10).** `wrangler.jsonc` turns on Workers Logs with `redact_query_string` and invocation logs off, because `/v1/live` carries the token in `?token=`. Keep memory contents and tokens out of `console.*`.
+  - **Ask tuning (PR #16).** `pickMatches` in `src/neon.ts` counts the best match at cosine ≥ 0.50, or at ≥ 0.35 when it leads the runner-up by ≥ 0.05. Unrelated questions scored 0.40–0.44 against everything, so the flat 0.40 cutoff let them through. `routes/ask.ts` adds the newest memory for "what did I just save?". Measured scores are in `neon/README.md`.
+  - **Known issue:** about 1 in 6 gpt-oss-120b replies on Workers AI degenerate into `!!!!` until `max_tokens`. `extractChatText` rejects them and `templateAnswer` speaks instead, so answers stay correct but sound stiff. A single retry or another chat model would fix it.
+  - **PAT runbook (PR #14):** `docs/runbooks/snowflake-pat-rotation.md`. An expired PAT now only breaks nearby and the business match.
+  - **CI (PR #13)** runs on every PR. #10 and #16 are live only after Arboy deploys.
 
 - 2026-10-27 Arboy → Messi: memories moved from Snowflake to **Neon Postgres + pgvector** (branch `arboy/neon-memories`; Arboy asked for it, so I edited `backend/`). `src/neon.ts` owns every memory query; `src/snowflake.ts` keeps only Overture places. Embeddings are Workers AI `@cf/baai/bge-m3` (1024-d), computed in the Worker; a save whose embedding fails is still stored and `GET /v1/memories` backfills it. `ASK_MIN_SCORE` is now 0.40 with a 0.08 relative gap (from a small BGE-M3 test). API contract unchanged; MOCK unchanged. New secret `DATABASE_URL`; schema and runbook in `neon/`.
 
